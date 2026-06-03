@@ -1,0 +1,40 @@
+{
+    "name": "OmniLight",
+    "type": "light",
+    "colors": {
+        "bg_primary": "#eff1f5",
+        "bg_secondary": "#e6e9ef",
+        "bg_tertiary": "#ccd0da",
+        "fg_primary": "#4c4f69",
+        "fg_secondary": "#6c6f85",
+        "accent": "#1e66f5",
+        "accent_hover": "#209fb5",
+        "error": "#d20f39",
+        "warning": "#fe640b",
+        "success": "#40a02b",
+        "border": "#bcc0cc",
+        "selection": "#ccd0da",
+        "line_highlight": "#e6e9ef",
+        "editor_bg": "#eff1f5",
+        "editor_fg": "#4c4f69",
+        "sidebar_bg": "#e6e9ef",
+        "terminal_bg": "#dce0e8",
+        "terminal_fg": "#4c4f69",
+        "tab_active": "#eff1f5",
+        "tab_inactive": "#e6e9ef",
+        "scrollbar": "#bcc0cc"
+    },
+    "syntax": {
+        "keyword": "#8839ef",
+        "string": "#40a02b",
+        "comment": "#9ca0b0",
+        "number": "#fe640b",
+        "function": "#1e66f5",
+        "class": "#df8e1d",
+        "operator": "#04a5e5",
+        "bracket": "#ea76cb",
+        "tag": "#d20f39",
+        "attribute": "#fe640b",
+        "builtin": "#ea76cb"
+    }
+}
