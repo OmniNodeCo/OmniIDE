@@ -17,6 +17,8 @@ hidden_imports = [
     "tkinter.font",
     "tkinter.filedialog",
     "tkinter.messagebox",
+    "tkinter.simpledialog",
+    "tkinter.colorchooser",
     "PIL",
     "PIL.Image",
     "PIL.ImageDraw",
@@ -32,6 +34,7 @@ hidden_imports = [
     "src.core.file_manager",
     "src.core.terminal",
     "src.core.search",
+    "src.core.git_manager",
     "src.ui",
     "src.ui.menubar",
     "src.ui.sidebar",
@@ -39,6 +42,7 @@ hidden_imports = [
     "src.ui.toolbar",
     "src.ui.file_tree",
     "src.ui.welcome",
+    "src.ui.splash",
     "src.utils",
     "src.utils.theme_loader",
     "src.utils.recent_files",
@@ -55,6 +59,9 @@ hidden_imports = [
     "io",
     "base64",
     "hashlib",
+    "shutil",
+    "signal",
+    "math",
 ]
 
 datas = [
@@ -72,13 +79,8 @@ a = Analysis(
     hooksconfig={},
     runtime_hooks=[],
     excludes=[
-        "matplotlib",
-        "numpy",
-        "scipy",
-        "pandas",
-        "pytest",
-        "setuptools",
-        "distutils",
+        "matplotlib", "numpy", "scipy",
+        "pandas", "pytest", "setuptools", "distutils",
     ],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
@@ -86,11 +88,7 @@ a = Analysis(
     noarchive=False,
 )
 
-pyz = PYZ(
-    a.pure,
-    a.zipped_data,
-    cipher=block_cipher,
-)
+pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
 exe = EXE(
     pyz,

@@ -1,12 +1,18 @@
 """Application configuration and constants."""
 
 import os
+import sys
 
 APP_NAME = "OmniIDE"
 APP_VERSION = "1.0.0"
 APP_AUTHOR = "OmniNodeCo"
 
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+# Handle PyInstaller bundle paths
+if getattr(sys, 'frozen', False):
+    BASE_DIR = sys._MEIPASS
+else:
+    BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 ASSETS_DIR = os.path.join(BASE_DIR, "assets")
 THEMES_DIR = os.path.join(ASSETS_DIR, "themes")
 
@@ -26,9 +32,10 @@ DEFAULT_SETTINGS = {
     "auto_indent": True,
     "window_width": 1200,
     "window_height": 750,
-    "sidebar_width": 250,
+    "sidebar_width": 260,
     "terminal_height": 200,
     "max_recent_files": 15,
+    "default_shell": "auto",
 }
 
 SUPPORTED_EXTENSIONS = {

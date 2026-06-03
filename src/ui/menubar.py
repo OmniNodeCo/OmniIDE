@@ -1,7 +1,6 @@
-"""Application menu bar."""
+"""Application menu bar with Git menu."""
 
 import tkinter as tk
-import sys
 
 
 class MenuBar:
@@ -15,6 +14,7 @@ class MenuBar:
         self._build_file_menu()
         self._build_edit_menu()
         self._build_view_menu()
+        self._build_git_menu()
         self._build_help_menu()
 
     def _build_file_menu(self):
@@ -34,7 +34,6 @@ class MenuBar:
             command=self.app.open_project,
         )
         file_menu.add_separator()
-
         file_menu.add_command(
             label="Save", accelerator="Ctrl+S",
             command=self.app.file_manager.save_file,
@@ -44,23 +43,19 @@ class MenuBar:
             command=self.app.file_manager.save_file_as,
         )
         file_menu.add_separator()
-
         file_menu.add_command(
             label="Close Tab", accelerator="Ctrl+W",
             command=self.app.tab_manager.close_active_tab,
         )
         file_menu.add_separator()
 
-        # Recent files submenu
+        # Recent files
         self.recent_menu = tk.Menu(file_menu, tearoff=0)
         file_menu.add_cascade(label="Recent Files", menu=self.recent_menu)
         self._update_recent_menu()
 
         file_menu.add_separator()
-        file_menu.add_command(
-            label="Exit", accelerator="Alt+F4",
-            command=self.app.root.quit,
-        )
+        file_menu.add_command(label="Exit", command=self.app.root.quit)
 
     def _build_edit_menu(self):
         edit_menu = tk.Menu(self.menu, tearoff=0)
@@ -125,14 +120,33 @@ class MenuBar:
             command=self._zoom_out,
         )
 
+    def _build_git_menu(self):
+        git_menu = tk.Menu(self.menu, tearoff=0)
+        self.menu.add_cascade(label="Git", menu=git_menu)
+
+        gm = self.app.git_manager
+
+        git_menu.add_command(label="Clone Repository...", command=gm.clone_repo)
+        git_menu.add_command(label="Init Repository", command=gm.init_repo)
+        git_menu.add_separator()
+        git_menu.add_command(label="Status", command=gm.git_status)
+        git_menu.add_command(label="Diff", command=gm.git_diff)
+        git_menu.add_command(label="Log", command=gm.git_log)
+        git_menu.add_command(label="Branches", command=gm.git_branch)
+        git_menu.add_separator()
+        git_menu.add_command(label="Stage All", command=gm.git_add_all)
+        git_menu.add_command(label="Commit...", command=gm.git_commit)
+        git_menu.add_separator()
+        git_menu.add_command(label="Push", command=gm.git_push)
+        git_menu.add_command(label="Pull", command=gm.git_pull)
+        git_menu.add_separator()
+        git_menu.add_command(label="Set Remote...", command=gm.add_remote)
+
     def _build_help_menu(self):
         help_menu = tk.Menu(self.menu, tearoff=0)
         self.menu.add_cascade(label="Help", menu=help_menu)
 
-        help_menu.add_command(
-            label="About OmniIDE",
-            command=self._show_about,
-        )
+        help_menu.add_command(label="About OmniIDE", command=self._show_about)
 
     def _editor_action(self, action):
         editor = self.app.tab_manager.get_active_editor()
@@ -176,7 +190,9 @@ class MenuBar:
         self.recent_menu.delete(0, "end")
         files = self.app.recent_files_manager.get_all()
         if not files:
-            self.recent_menu.add_command(label="(No recent files)", state="disabled")
+            self.recent_menu.add_command(
+                label="(No recent files)", state="disabled"
+            )
         else:
             for fp in files:
                 self.recent_menu.add_command(
@@ -192,5 +208,5 @@ class MenuBar:
             "A fast, modern, lightweight desktop IDE.\n"
             "Built from scratch by OmniNodeCo.\n\n"
             "No Electron. No bloat. Pure speed.\n\n"
-            "© 2024 OmniNodeCo",
+            "(c) 2024 OmniNodeCo",
         )
