@@ -45,7 +45,7 @@ jobs:
             --onefile `
             --windowed `
             --name OmniIDE `
-            --icon assets/icon.ico `
+            --icon assets/logo.svg `
             --add-data "assets;assets" `
             --hidden-import ttkbootstrap `
             --hidden-import tkinter `
