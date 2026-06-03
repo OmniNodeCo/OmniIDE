@@ -1,5 +1,7 @@
 """Main application window."""
 
+import tkinter as tk
+import tkinter.ttk as tkttk
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
 import json
@@ -61,6 +63,10 @@ class OmniIDEApp:
         self._apply_custom_colors()
         self._show_welcome()
 
+    # ──────────────────────────────────────────────────
+    # Settings
+    # ──────────────────────────────────────────────────
+
     def _load_settings(self):
         if os.path.exists(SETTINGS_PATH):
             try:
@@ -78,35 +84,40 @@ class OmniIDEApp:
         except Exception:
             pass
 
+    # ──────────────────────────────────────────────────
+    # UI Construction
+    # ──────────────────────────────────────────────────
+
     def _build_ui(
         self, Toolbar, Sidebar, TabManager,
         Terminal, SearchBar, StatusBar, MenuBar,
     ):
-        self.root.columnconfigure(1, weight=1)
+        self.root.columnconfigure(0, weight=1)
         self.root.rowconfigure(2, weight=1)
 
-        # Toolbar
+        # ── Toolbar (row 0) ──
         self.toolbar = Toolbar(self.root, self)
-        self.toolbar.frame.grid(row=0, column=0, columnspan=2, sticky="ew")
+        self.toolbar.frame.grid(row=0, column=0, sticky="ew")
 
-        # Search bar (hidden by default)
+        # ── Search bar (row 1, hidden by default) ──
         self.search_bar = SearchBar(self.root, self)
-        self.search_bar.frame.grid(row=1, column=0, columnspan=2, sticky="ew")
+        self.search_bar.frame.grid(row=1, column=0, sticky="ew")
         self.search_bar.hide()
 
-        # Main content area
-        self.main_pane = ttk.PanedWindow(self.root, orient=HORIZONTAL)
-        self.main_pane.grid(row=2, column=0, columnspan=2, sticky="nsew")
+        # ── Main pane: sidebar | editor+terminal (row 2) ──
+        # Use tkinter.ttk.PanedWindow — ttkbootstrap does not have one
+        self.main_pane = tkttk.PanedWindow(self.root, orient=tk.HORIZONTAL)
+        self.main_pane.grid(row=2, column=0, sticky="nsew")
 
         # Sidebar
         self.sidebar = Sidebar(self.main_pane, self)
         self.main_pane.add(self.sidebar.frame, weight=0)
 
-        # Right side: editor + terminal
-        self.right_pane = ttk.PanedWindow(self.main_pane, orient=VERTICAL)
+        # Right pane: editor on top, terminal on bottom
+        self.right_pane = tkttk.PanedWindow(self.main_pane, orient=tk.VERTICAL)
         self.main_pane.add(self.right_pane, weight=1)
 
-        # Tab manager
+        # Tab manager / editor area
         self.tab_manager = TabManager(self.right_pane, self)
         self.right_pane.add(self.tab_manager.frame, weight=1)
 
@@ -114,41 +125,30 @@ class OmniIDEApp:
         self.terminal = Terminal(self.right_pane, self)
         self.right_pane.add(self.terminal.frame, weight=0)
 
-        # Statusbar
+        # ── Status bar (row 3) ──
         self.statusbar = StatusBar(self.root, self)
-        self.statusbar.frame.grid(row=3, column=0, columnspan=2, sticky="ew")
+        self.statusbar.frame.grid(row=3, column=0, sticky="ew")
 
-        # Menubar
+        # ── Menu bar ──
         self.menubar = MenuBar(self.root, self)
+
+    # ──────────────────────────────────────────────────
+    # Theming
+    # ──────────────────────────────────────────────────
 
     def _apply_custom_colors(self):
         c = self.colors
         self.root.configure(bg=c["bg_primary"])
+
         style = ttk.Style()
-        style.configure("Sidebar.TFrame", background=c["sidebar_bg"])
-        style.configure("Editor.TFrame", background=c["editor_bg"])
+        style.configure("Sidebar.TFrame",  background=c["sidebar_bg"])
+        style.configure("Editor.TFrame",   background=c["editor_bg"])
         style.configure(
             "Status.TLabel",
             background=c["bg_tertiary"],
             foreground=c["fg_secondary"],
             font=("Segoe UI", 9),
         )
-
-    def _show_welcome(self):
-        welcome = self._WelcomeTab(self)
-        welcome.show()
-
-    def set_status(self, text):
-        self.statusbar.set_text(text)
-
-    def toggle_sidebar(self):
-        self.sidebar.toggle()
-
-    def toggle_terminal(self):
-        self.terminal.toggle()
-
-    def toggle_search(self):
-        self.search_bar.toggle()
 
     def switch_theme(self):
         if self.settings["theme"] == "dark":
@@ -166,6 +166,30 @@ class OmniIDEApp:
         self.tab_manager.refresh_all_highlighting()
         self.save_settings()
         self.set_status(f"Theme: {self.settings['theme'].title()}")
+
+    # ──────────────────────────────────────────────────
+    # Welcome screen
+    # ──────────────────────────────────────────────────
+
+    def _show_welcome(self):
+        welcome = self._WelcomeTab(self)
+        welcome.show()
+
+    # ──────────────────────────────────────────────────
+    # Public helpers
+    # ──────────────────────────────────────────────────
+
+    def set_status(self, text):
+        self.statusbar.set_text(text)
+
+    def toggle_sidebar(self):
+        self.sidebar.toggle()
+
+    def toggle_terminal(self):
+        self.terminal.toggle()
+
+    def toggle_search(self):
+        self.search_bar.toggle()
 
     def open_project(self, path=None):
         if path is None:

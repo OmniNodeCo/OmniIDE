@@ -1,0 +1,1 @@
+"""Icon package for OmniIDE."""

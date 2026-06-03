@@ -1,6 +1,7 @@
 """Tab manager for multiple open files."""
 
 import tkinter as tk
+import tkinter.ttk as tkttk
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
 import os
@@ -13,12 +14,13 @@ class TabManager:
 
     def __init__(self, parent, app):
         self.app = app
-        self.tabs = {}  # {tab_id: {editor, line_numbers, filepath, frame}}
+        self.tabs = {}
         self.tab_counter = 0
 
         self.frame = ttk.Frame(parent)
 
-        self.notebook = ttk.Notebook(self.frame, bootstyle="dark")
+        # Use ttkbootstrap Notebook — this one IS available
+        self.notebook = ttk.Notebook(self.frame)
         self.notebook.pack(fill=BOTH, expand=True)
         self.notebook.bind("<<NotebookTabChanged>>", self._on_tab_changed)
 
@@ -29,13 +31,13 @@ class TabManager:
 
         tab_frame = ttk.Frame(self.notebook)
 
-        # Editor container with line numbers
+        # Editor container
         editor_container = ttk.Frame(tab_frame)
         editor_container.pack(fill=BOTH, expand=True)
 
-        # Scrollbar
-        v_scroll = ttk.Scrollbar(editor_container, orient=VERTICAL)
-        h_scroll = ttk.Scrollbar(editor_container, orient=HORIZONTAL)
+        # Scrollbars — use tkinter.ttk to be safe
+        v_scroll = tkttk.Scrollbar(editor_container, orient=tk.VERTICAL)
+        h_scroll = tkttk.Scrollbar(editor_container, orient=tk.HORIZONTAL)
 
         editor = CodeEditor(
             editor_container, self.app, filepath=filepath,
@@ -46,36 +48,36 @@ class TabManager:
         line_numbers = LineNumbers(
             editor_container, editor, self.app.colors
         )
-        line_numbers.set_font((self.app.settings["font_family"], self.app.settings["font_size"]))
+        line_numbers.set_font((
+            self.app.settings["font_family"],
+            self.app.settings["font_size"],
+        ))
 
         v_scroll.config(command=editor.yview)
         h_scroll.config(command=editor.xview)
 
-        line_numbers.pack(side=LEFT, fill=Y)
+        line_numbers.pack(side=LEFT, fill=tk.Y)
         editor.pack(side=LEFT, fill=BOTH, expand=True)
-        v_scroll.pack(side=RIGHT, fill=Y)
-        h_scroll.pack(side=BOTTOM, fill=X)
+        v_scroll.pack(side=RIGHT, fill=tk.Y)
+        h_scroll.pack(side=BOTTOM, fill=tk.X)
 
-        # Sync line numbers
-        def on_scroll(*args):
+        # Sync line numbers on scroll
+        def _on_yscroll(*args):
             line_numbers.redraw()
             v_scroll.set(*args)
 
-        editor.configure(yscrollcommand=on_scroll)
+        editor.configure(yscrollcommand=_on_yscroll)
         editor.bind("<Configure>", lambda e: line_numbers.redraw())
-        editor.bind("<KeyRelease>", lambda e: (
-            line_numbers.redraw(),
-            editor._on_key_release(e),
-        ))
+        editor.bind(
+            "<KeyRelease>",
+            lambda e: (line_numbers.redraw(), editor._on_key_release(e)),
+        )
 
         if content:
             editor.set_content(content)
 
         if title is None:
-            if filepath:
-                title = os.path.basename(filepath)
-            else:
-                title = f"Untitled-{self.tab_counter}"
+            title = os.path.basename(filepath) if filepath else f"Untitled-{self.tab_counter}"
 
         self.notebook.add(tab_frame, text=f"  {title}  ")
         self.notebook.select(tab_frame)
@@ -103,7 +105,7 @@ class TabManager:
         return None
 
     def get_active_tab_info(self):
-        """Return info dict for active tab."""
+        """Return info dict for the active tab."""
         tab_frame = self._get_active_frame()
         if tab_frame is None:
             return None
@@ -114,7 +116,10 @@ class TabManager:
 
     def _get_active_frame(self):
         try:
-            return self.notebook.nametowidget(self.notebook.select())
+            selected = self.notebook.select()
+            if not selected:
+                return None
+            return self.notebook.nametowidget(selected)
         except Exception:
             return None
 
@@ -148,29 +153,34 @@ class TabManager:
             self.app.set_status("Tab closed")
 
     def mark_modified(self, editor):
-        """Add modification indicator to tab title."""
+        """Add unsaved indicator to tab title."""
         for info in self.tabs.values():
             if info["editor"] == editor:
-                idx = self.notebook.index(info["frame"])
-                title = info["title"]
-                if not title.startswith("● "):
-                    self.notebook.tab(idx, text=f"  ● {title}  ")
+                try:
+                    idx = self.notebook.index(info["frame"])
+                    title = info["title"]
+                    if not title.startswith("● "):
+                        self.notebook.tab(idx, text=f"  ● {title}  ")
+                except Exception:
+                    pass
                 break
 
     def mark_saved(self, editor, new_title=None):
-        """Remove modification indicator from tab title."""
+        """Remove unsaved indicator from tab title."""
         for info in self.tabs.values():
             if info["editor"] == editor:
                 if new_title:
                     info["title"] = new_title
-                idx = self.notebook.index(info["frame"])
-                title = info["title"]
-                self.notebook.tab(idx, text=f"  {title}  ")
+                try:
+                    idx = self.notebook.index(info["frame"])
+                    self.notebook.tab(idx, text=f"  {info['title']}  ")
+                except Exception:
+                    pass
                 editor.modified = False
                 break
 
     def update_filepath(self, editor, filepath):
-        """Update the filepath stored for a tab."""
+        """Update the stored filepath for a tab."""
         for info in self.tabs.values():
             if info["editor"] == editor:
                 info["filepath"] = filepath
@@ -189,7 +199,7 @@ class TabManager:
         return len(self.tabs) > 0
 
     def refresh_all_highlighting(self):
-        """Re-apply syntax highlighting on all open editors."""
+        """Re-apply colors and syntax on all open editors."""
         for info in self.tabs.values():
             info["editor"].refresh_colors()
             info["line_numbers"].colors = self.app.colors

@@ -1,20 +1,8 @@
 # -*- mode: python ; coding: utf-8 -*-
-"""
-PyInstaller spec file for OmniIDE.
-Use this instead of passing flags on the command line.
-
-Build with:
-    pyinstaller OmniIDE.spec
-"""
-
-import sys
-import os
 
 block_cipher = None
 
-# All src submodules listed explicitly so PyInstaller never misses them
 hidden_imports = [
-    # ttkbootstrap
     "ttkbootstrap",
     "ttkbootstrap.constants",
     "ttkbootstrap.style",
@@ -24,21 +12,16 @@ hidden_imports = [
     "ttkbootstrap.tooltip",
     "ttkbootstrap.tableview",
     "ttkbootstrap.validation",
-    # tkinter
     "tkinter",
     "tkinter.ttk",
     "tkinter.font",
     "tkinter.filedialog",
     "tkinter.messagebox",
-    "tkinter.colorchooser",
-    "tkinter.simpledialog",
-    # PIL
     "PIL",
     "PIL.Image",
     "PIL.ImageDraw",
     "PIL.ImageFont",
     "PIL.ImageTk",
-    # src core
     "src",
     "src.app",
     "src.config",
@@ -49,7 +32,6 @@ hidden_imports = [
     "src.core.file_manager",
     "src.core.terminal",
     "src.core.search",
-    # src ui
     "src.ui",
     "src.ui.menubar",
     "src.ui.sidebar",
@@ -57,21 +39,24 @@ hidden_imports = [
     "src.ui.toolbar",
     "src.ui.file_tree",
     "src.ui.welcome",
-    # src utils
     "src.utils",
     "src.utils.theme_loader",
     "src.utils.recent_files",
     "src.utils.shortcuts",
-    # stdlib
+    "src.utils.icon_manager",
+    "assets.icons",
+    "assets.icons.icons",
     "json",
     "os",
     "re",
     "subprocess",
     "threading",
     "sys",
+    "io",
+    "base64",
+    "hashlib",
 ]
 
-# Collect all data files
 datas = [
     ("assets", "assets"),
     ("src", "src"),
@@ -121,10 +106,9 @@ exe = EXE(
     upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
-    console=False,          # no black console window
+    console=False,
     disable_windowed_traceback=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    # icon is set per-platform in the workflow
 )

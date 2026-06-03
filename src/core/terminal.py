@@ -1,4 +1,4 @@
-"""Built-in terminal emulator."""
+"""Built-in terminal with SVG icons."""
 
 import tkinter as tk
 import ttkbootstrap as ttk
@@ -8,6 +8,8 @@ import threading
 import os
 import sys
 
+from src.utils.icon_manager import IconManager
+
 
 class Terminal:
     """Simple integrated terminal."""
@@ -16,6 +18,8 @@ class Terminal:
         self.app = app
         self.process = None
         self.visible = True
+        self.icon_mgr = IconManager()
+        self._icon_refs = []
 
         self.frame = ttk.Frame(parent)
 
@@ -23,19 +27,35 @@ class Terminal:
         header = ttk.Frame(self.frame)
         header.pack(fill=X)
 
+        term_icon = self.icon_mgr.get("terminal", 16)
+        self._icon_refs.append(term_icon)
+
         ttk.Label(
-            header, text="  ⌨ Terminal",
+            header,
+            text=" Terminal",
+            image=term_icon,
+            compound=LEFT,
             font=("Segoe UI", 10, "bold"),
         ).pack(side=LEFT, padx=5)
 
+        close_icon = self.icon_mgr.get("close", 16)
+        self._icon_refs.append(close_icon)
+
         ttk.Button(
-            header, text="✕", width=3,
+            header,
+            image=close_icon,
             bootstyle="danger-link",
             command=self.toggle,
         ).pack(side=RIGHT)
 
+        clear_icon = self.icon_mgr.get("clear", 16)
+        self._icon_refs.append(clear_icon)
+
         ttk.Button(
-            header, text="Clear",
+            header,
+            text=" Clear",
+            image=clear_icon,
+            compound=LEFT,
             bootstyle="secondary-link",
             command=self.clear,
         ).pack(side=RIGHT, padx=5)
@@ -84,7 +104,6 @@ class Terminal:
         self.input_entry.delete(0, "end")
         self._write_output(f"$ {cmd}\n")
 
-        # Handle cd command
         if cmd.startswith("cd "):
             path = cmd[3:].strip()
             try:
@@ -96,30 +115,26 @@ class Terminal:
                 self._write_output(f"Directory not found: {path}\n\n")
             return
 
-        if cmd == "clear" or cmd == "cls":
+        if cmd in ("clear", "cls"):
             self.clear()
             return
 
-        thread = threading.Thread(target=self._run_command, args=(cmd,), daemon=True)
+        thread = threading.Thread(
+            target=self._run_command, args=(cmd,), daemon=True
+        )
         thread.start()
 
     def _run_command(self, cmd):
         try:
-            shell = True
-            if sys.platform == "win32":
-                process = subprocess.Popen(
-                    cmd, shell=shell, stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT, text=True, cwd=os.getcwd(),
-                )
-            else:
-                process = subprocess.Popen(
-                    cmd, shell=shell, stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT, text=True, cwd=os.getcwd(),
-                )
-
+            process = subprocess.Popen(
+                cmd, shell=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                text=True,
+                cwd=os.getcwd(),
+            )
             output, _ = process.communicate(timeout=30)
             self.output.after(0, self._write_output, output + "\n")
-
         except subprocess.TimeoutExpired:
             self.output.after(0, self._write_output, "Command timed out.\n\n")
         except Exception as e:
