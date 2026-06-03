@@ -35,6 +35,7 @@ hidden_imports = [
     "src.core.terminal",
     "src.core.search",
     "src.core.git_manager",
+    "src.core.extension_manager",
     "src.ui",
     "src.ui.menubar",
     "src.ui.sidebar",
@@ -43,11 +44,13 @@ hidden_imports = [
     "src.ui.file_tree",
     "src.ui.welcome",
     "src.ui.splash",
+    "src.ui.extensions_panel",
     "src.utils",
     "src.utils.theme_loader",
     "src.utils.recent_files",
     "src.utils.shortcuts",
     "src.utils.icon_manager",
+    "src.utils.styles",
     "assets.icons",
     "assets.icons.icons",
     "json",
@@ -62,6 +65,10 @@ hidden_imports = [
     "shutil",
     "signal",
     "math",
+    "urllib",
+    "urllib.request",
+    "urllib.error",
+    "zipfile",
 ]
 
 datas = [

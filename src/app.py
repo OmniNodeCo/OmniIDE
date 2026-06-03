@@ -1,4 +1,4 @@
-"""Main application window."""
+"""Main application — v1.0.1."""
 
 import tkinter as tk
 import tkinter.ttk as tkttk
@@ -6,7 +6,6 @@ import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
 import json
 import os
-import sys
 
 from src.config import (
     APP_NAME, APP_VERSION, APP_AUTHOR,
@@ -22,16 +21,15 @@ class OmniIDEApp:
         theme_name = "darkly" if self.settings["theme"] == "dark" else "cosmo"
 
         self.root = ttk.Window(
-            title=f"{APP_NAME} — {APP_AUTHOR}",
+            title=f"{APP_NAME} v{APP_VERSION} — {APP_AUTHOR}",
             themename=theme_name,
             size=(self.settings["window_width"], self.settings["window_height"]),
             minsize=(800, 500),
         )
 
-        # Hide main window during splash
         self.root.withdraw()
 
-        # Show splash screen
+        # Splash
         from src.ui.splash import SplashScreen
         self.splash = SplashScreen(self.root)
         self.splash.update_status("Loading modules...")
@@ -40,11 +38,13 @@ class OmniIDEApp:
         from src.utils.theme_loader import ThemeLoader
         from src.utils.recent_files import RecentFilesManager
         from src.utils.shortcuts import ShortcutManager
+        from src.utils.styles import apply_global_styles
         from src.core.file_manager import FileManager
         from src.core.tab_manager import TabManager
         from src.core.terminal import Terminal
         from src.core.search import SearchBar
         from src.core.git_manager import GitManager
+        from src.core.extension_manager import ExtensionManager
         from src.ui.menubar import MenuBar
         from src.ui.sidebar import Sidebar
         from src.ui.statusbar import StatusBar
@@ -54,18 +54,19 @@ class OmniIDEApp:
         self._WelcomeTab = WelcomeTab
 
         self.splash.update_status("Loading theme...")
-        self.splash.set_progress(20)
+        self.splash.set_progress(15)
 
         self.theme_loader = ThemeLoader(self.settings["theme"])
         self.colors = self.theme_loader.colors
         self.syntax_colors = self.theme_loader.syntax
 
-        self.splash.update_status("Initializing file manager...")
-        self.splash.set_progress(35)
+        self.splash.update_status("Initializing managers...")
+        self.splash.set_progress(30)
 
         self.recent_files_manager = RecentFilesManager()
         self.file_manager = FileManager(self)
         self.git_manager = GitManager(self)
+        self.extension_manager = ExtensionManager(self)
         self.current_project_path = None
 
         self.splash.update_status("Building interface...")
@@ -76,25 +77,23 @@ class OmniIDEApp:
             Terminal, SearchBar, StatusBar, MenuBar,
         )
 
-        self.splash.update_status("Binding shortcuts...")
+        self.splash.update_status("Applying styles...")
         self.splash.set_progress(70)
+
+        apply_global_styles(self)
+
+        self.splash.update_status("Binding shortcuts...")
+        self.splash.set_progress(85)
 
         self.shortcut_manager = ShortcutManager(self)
         self.shortcut_manager.bind_all()
 
-        self.splash.update_status("Applying theme...")
-        self.splash.set_progress(85)
-
-        self._apply_custom_colors()
-
         self.splash.update_status("Ready!")
         self.splash.set_progress(100)
 
-        # Close splash after a short delay
         self.root.after(600, self._finish_startup)
 
     def _finish_startup(self):
-        """Close splash and show main window."""
         self.splash.close()
         self.root.deiconify()
         self._show_welcome()
@@ -124,16 +123,16 @@ class OmniIDEApp:
         self.root.columnconfigure(0, weight=1)
         self.root.rowconfigure(2, weight=1)
 
-        # Toolbar (row 0)
+        # Row 0 — Toolbar
         self.toolbar = Toolbar(self.root, self)
         self.toolbar.frame.grid(row=0, column=0, sticky="ew")
 
-        # Search bar (row 1, hidden)
+        # Row 1 — Search bar (hidden)
         self.search_bar = SearchBar(self.root, self)
         self.search_bar.frame.grid(row=1, column=0, sticky="ew")
         self.search_bar.hide()
 
-        # Main pane (row 2)
+        # Row 2 — Main pane
         self.main_pane = tkttk.PanedWindow(self.root, orient=tk.HORIZONTAL)
         self.main_pane.grid(row=2, column=0, sticky="nsew")
 
@@ -141,51 +140,26 @@ class OmniIDEApp:
         self.sidebar = Sidebar(self.main_pane, self)
         self.main_pane.add(self.sidebar.frame, weight=0)
 
-        # Right pane
+        # Right pane (editor + terminal)
         self.right_pane = tkttk.PanedWindow(self.main_pane, orient=tk.VERTICAL)
         self.main_pane.add(self.right_pane, weight=1)
 
-        # Tab manager
         self.tab_manager = TabManager(self.right_pane, self)
         self.right_pane.add(self.tab_manager.frame, weight=1)
 
-        # Terminal
         self.terminal = Terminal(self.right_pane, self)
         self.right_pane.add(self.terminal.frame, weight=0)
 
-        # Status bar (row 3)
+        # Row 3 — Status bar
         self.statusbar = StatusBar(self.root, self)
         self.statusbar.frame.grid(row=3, column=0, sticky="ew")
 
         # Menu bar
         self.menubar = MenuBar(self.root, self)
 
-    def _apply_custom_colors(self):
-        c = self.colors
-        self.root.configure(bg=c["bg_primary"])
-
-        style = ttk.Style()
-        style.configure("Sidebar.TFrame", background=c["sidebar_bg"])
-        style.configure("Editor.TFrame", background=c["editor_bg"])
-        style.configure(
-            "Status.TLabel",
-            background=c["bg_tertiary"],
-            foreground=c["fg_secondary"],
-            font=("Segoe UI", 9),
-        )
-        # Modern button styling
-        style.configure(
-            "Modern.TButton",
-            font=("Segoe UI", 10),
-            padding=(12, 6),
-        )
-        style.configure(
-            "ModernSmall.TButton",
-            font=("Segoe UI", 9),
-            padding=(8, 4),
-        )
-
     def switch_theme(self):
+        from src.utils.styles import apply_global_styles
+
         if self.settings["theme"] == "dark":
             self.settings["theme"] = "light"
             self.root.style.theme_use("cosmo")
@@ -197,7 +171,7 @@ class OmniIDEApp:
         self.theme_loader = ThemeLoader(self.settings["theme"])
         self.colors = self.theme_loader.colors
         self.syntax_colors = self.theme_loader.syntax
-        self._apply_custom_colors()
+        apply_global_styles(self)
         self.tab_manager.refresh_all_highlighting()
         self.save_settings()
         self.set_status(f"Theme: {self.settings['theme'].title()}")

@@ -4,7 +4,7 @@ import os
 import sys
 
 APP_NAME = "OmniIDE"
-APP_VERSION = "1.0.0"
+APP_VERSION = "1.0.1"
 APP_AUTHOR = "OmniNodeCo"
 
 # Handle PyInstaller bundle paths
@@ -19,8 +19,14 @@ THEMES_DIR = os.path.join(ASSETS_DIR, "themes")
 CONFIG_DIR = os.path.join(os.path.expanduser("~"), ".omniide")
 RECENT_FILES_PATH = os.path.join(CONFIG_DIR, "recent_files.json")
 SETTINGS_PATH = os.path.join(CONFIG_DIR, "settings.json")
+EXTENSIONS_DIR = os.path.join(CONFIG_DIR, "extensions")
 
 os.makedirs(CONFIG_DIR, exist_ok=True)
+os.makedirs(EXTENSIONS_DIR, exist_ok=True)
+
+# VS Code Marketplace API
+VSCODE_MARKETPLACE_URL = "https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery"
+VSCODE_MARKETPLACE_VERSION = "7.2-preview.1"
 
 DEFAULT_SETTINGS = {
     "theme": "dark",
@@ -32,10 +38,11 @@ DEFAULT_SETTINGS = {
     "auto_indent": True,
     "window_width": 1200,
     "window_height": 750,
-    "sidebar_width": 260,
+    "sidebar_width": 280,
     "terminal_height": 200,
     "max_recent_files": 15,
     "default_shell": "auto",
+    "installed_extensions": [],
 }
 
 SUPPORTED_EXTENSIONS = {
