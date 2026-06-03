@@ -17,7 +17,7 @@ permissions:
 jobs:
 
   # ─────────────────────────────────────────
-  # WINDOWS BUILD
+  # WINDOWS
   # ─────────────────────────────────────────
   build-windows:
     name: 🪟 Windows Build
@@ -37,31 +37,69 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pyinstaller
+          pip install pyinstaller pillow
 
-      - name: Build Windows executable
+      - name: Generate icon
+        shell: python
         run: |
-          pyinstaller `
-            --onefile `
-            --windowed `
-            --name OmniIDE `
-            --icon assets/logo.ico `
-            --add-data "assets;assets" `
-            --hidden-import ttkbootstrap `
-            --hidden-import tkinter `
-            run.py
+          import os
+          from PIL import Image, ImageDraw
 
-      - name: Verify build output
+          os.makedirs("assets", exist_ok=True)
+          sizes = [16, 32, 48, 64, 128, 256]
+          images = []
+
+          for size in sizes:
+              img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+              draw = ImageDraw.Draw(img)
+              m = size // 8
+              draw.ellipse([m, m, size-m, size-m], fill=(30, 30, 46, 255))
+              i = size // 4
+              draw.ellipse([i, i, size-i, size-i], fill=(137, 180, 250, 255))
+              c = size // 2
+              d = size // 6
+              draw.ellipse([c-d, c-d, c+d, c+d], fill=(30, 30, 46, 255))
+              images.append(img)
+
+          images[0].save(
+              "assets/icon.ico", format="ICO",
+              sizes=[(s, s) for s in sizes],
+              append_images=images[1:],
+          )
+          images[-1].save("assets/icon.png", format="PNG")
+          print("Icons generated")
+
+      - name: Patch spec icon for Windows
+        shell: python
+        run: |
+          with open("OmniIDE.spec", "r") as f:
+              content = f.read()
+
+          # inject icon into EXE() call
+          content = content.replace(
+              "entitlements_file=None,",
+              "entitlements_file=None,\n    icon='assets/icon.ico',",
+          )
+
+          with open("OmniIDE.spec", "w") as f:
+              f.write(content)
+
+          print("Spec patched with Windows icon")
+
+      - name: Build with spec file
+        run: pyinstaller OmniIDE.spec
+
+      - name: Verify
         run: |
           if (Test-Path "dist/OmniIDE.exe") {
-            Write-Host "✅ OmniIDE.exe built successfully"
-            Get-Item "dist/OmniIDE.exe" | Select-Object Name, Length, LastWriteTime
+            Write-Host "✅ OmniIDE.exe built"
+            Get-Item "dist/OmniIDE.exe" | Select-Object Name, Length
           } else {
-            Write-Host "❌ Build failed — OmniIDE.exe not found"
+            Write-Host "❌ Build failed"
             exit 1
           }
 
-      - name: Upload Windows artifact
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: OmniIDE-Windows
@@ -69,7 +107,7 @@ jobs:
           retention-days: 30
 
   # ─────────────────────────────────────────
-  # MACOS BUILD
+  # MACOS
   # ─────────────────────────────────────────
   build-macos:
     name: 🍎 macOS Build
@@ -85,45 +123,66 @@ jobs:
           python-version: "3.11"
           cache: "pip"
 
-      - name: Install system dependencies
+      - name: Install dependencies
         run: |
           brew install python-tk@3.11 || true
-
-      - name: Install Python dependencies
-        run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pyinstaller
+          pip install pyinstaller pillow
 
-      - name: Build macOS app bundle
+      - name: Generate icon
+        shell: python3 {0}
         run: |
-          pyinstaller \
-            --onefile \
-            --windowed \
-            --name OmniIDE \
-            --add-data "assets:assets" \
-            --hidden-import ttkbootstrap \
-            --hidden-import tkinter \
-            --osx-bundle-identifier com.omninodeco.omniide \
-            run.py
+          import os
+          from PIL import Image, ImageDraw
 
-      - name: Package into zip
+          os.makedirs("assets", exist_ok=True)
+          sizes = [16, 32, 48, 64, 128, 256]
+          images = []
+
+          for size in sizes:
+              img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+              draw = ImageDraw.Draw(img)
+              m = size // 8
+              draw.ellipse([m, m, size-m, size-m], fill=(30, 30, 46, 255))
+              i = size // 4
+              draw.ellipse([i, i, size-i, size-i], fill=(137, 180, 250, 255))
+              c = size // 2
+              d = size // 6
+              draw.ellipse([c-d, c-d, c+d, c+d], fill=(30, 30, 46, 255))
+              images.append(img)
+
+          images[0].save(
+              "assets/icon.ico", format="ICO",
+              sizes=[(s, s) for s in sizes],
+              append_images=images[1:],
+          )
+          images[-1].save("assets/icon.png", format="PNG")
+          print("Icons generated")
+
+      - name: Build with spec file
+        run: pyinstaller OmniIDE.spec
+
+      - name: Package
         run: |
           cd dist
-          zip -r OmniIDE-macOS.zip OmniIDE.app || zip -r OmniIDE-macOS.zip OmniIDE
-          cd ..
+          if [ -d "OmniIDE.app" ]; then
+            zip -r OmniIDE-macOS.zip OmniIDE.app
+          else
+            zip -r OmniIDE-macOS.zip OmniIDE
+          fi
 
-      - name: Verify build output
+      - name: Verify
         run: |
           if [ -f "dist/OmniIDE-macOS.zip" ]; then
-            echo "✅ OmniIDE macOS built successfully"
+            echo "✅ macOS build done"
             ls -lh dist/OmniIDE-macOS.zip
           else
             echo "❌ Build failed"
             exit 1
           fi
 
-      - name: Upload macOS artifact
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: OmniIDE-macOS
@@ -131,7 +190,7 @@ jobs:
           retention-days: 30
 
   # ─────────────────────────────────────────
-  # LINUX BUILD
+  # LINUX
   # ─────────────────────────────────────────
   build-linux:
     name: 🐧 Linux Build
@@ -164,39 +223,58 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pyinstaller
+          pip install pyinstaller pillow
 
-      - name: Build Linux executable
+      - name: Generate icon
+        shell: python3 {0}
         run: |
-          pyinstaller \
-            --onefile \
-            --windowed \
-            --name OmniIDE \
-            --add-data "assets:assets" \
-            --hidden-import ttkbootstrap \
-            --hidden-import tkinter \
-            run.py
+          import os
+          from PIL import Image, ImageDraw
 
-      - name: Make executable
-        run: chmod +x dist/OmniIDE
+          os.makedirs("assets", exist_ok=True)
+          sizes = [16, 32, 48, 64, 128, 256]
+          images = []
 
-      - name: Package into tar.gz
+          for size in sizes:
+              img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+              draw = ImageDraw.Draw(img)
+              m = size // 8
+              draw.ellipse([m, m, size-m, size-m], fill=(30, 30, 46, 255))
+              i = size // 4
+              draw.ellipse([i, i, size-i, size-i], fill=(137, 180, 250, 255))
+              c = size // 2
+              d = size // 6
+              draw.ellipse([c-d, c-d, c+d, c+d], fill=(30, 30, 46, 255))
+              images.append(img)
+
+          images[0].save(
+              "assets/icon.ico", format="ICO",
+              sizes=[(s, s) for s in sizes],
+              append_images=images[1:],
+          )
+          images[-1].save("assets/icon.png", format="PNG")
+          print("Icons generated")
+
+      - name: Build with spec file
+        run: pyinstaller OmniIDE.spec
+
+      - name: Package
         run: |
+          chmod +x dist/OmniIDE
           cd dist
           tar -czvf OmniIDE-Linux.tar.gz OmniIDE
-          cd ..
 
-      - name: Verify build output
+      - name: Verify
         run: |
           if [ -f "dist/OmniIDE-Linux.tar.gz" ]; then
-            echo "✅ OmniIDE Linux built successfully"
+            echo "✅ Linux build done"
             ls -lh dist/OmniIDE-Linux.tar.gz
           else
             echo "❌ Build failed"
             exit 1
           fi
 
-      - name: Upload Linux artifact
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: OmniIDE-Linux
@@ -204,7 +282,7 @@ jobs:
           retention-days: 30
 
   # ─────────────────────────────────────────
-  # RELEASE — runs only on version tags
+  # RELEASE
   # ─────────────────────────────────────────
   release:
     name: 🚀 Create GitHub Release
@@ -216,26 +294,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Download Windows artifact
+      - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
-          name: OmniIDE-Windows
-          path: release/
-
-      - name: Download macOS artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: OmniIDE-macOS
-          path: release/
-
-      - name: Download Linux artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: OmniIDE-Linux
           path: release/
 
       - name: List release files
-        run: ls -lh release/
+        run: find release/ -type f
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -246,10 +311,7 @@ jobs:
             # 🚀 OmniIDE ${{ github.ref_name }}
             **by OmniNodeCo**
 
-            A fast, modern, lightweight desktop IDE.
-            No Electron. No bloat. Pure speed.
-
-            ---
+            Fast. Modern. Lightweight. No Electron. No bloat.
 
             ## 📦 Downloads
 
@@ -259,41 +321,27 @@ jobs:
             | 🍎 macOS   | `OmniIDE-macOS.zip` |
             | 🐧 Linux   | `OmniIDE-Linux.tar.gz` |
 
-            ---
+            ## 🛠 Install
 
-            ## 🛠 Installation
-
-            **Windows**
-            ```
-            Download OmniIDE.exe and run it directly. No install needed.
-            ```
+            **Windows** — Run `OmniIDE.exe` directly.
 
             **macOS**
             ```bash
-            unzip OmniIDE-macOS.zip
-            open OmniIDE.app
-            # If blocked: System Preferences → Security → Open Anyway
+            unzip OmniIDE-macOS.zip && open OmniIDE.app
             ```
 
             **Linux**
             ```bash
-            tar -xzvf OmniIDE-Linux.tar.gz
-            chmod +x OmniIDE
-            ./OmniIDE
+            tar -xzvf OmniIDE-Linux.tar.gz && chmod +x OmniIDE && ./OmniIDE
             ```
-
-            ---
-
-            ## ✨ What's New
-            See [CHANGELOG](https://github.com/OmniNodeCo/OmniIDE/blob/main/README.md)
 
             ---
             Made with ❤️ by **OmniNodeCo**
           draft: false
           prerelease: false
           files: |
-            release/OmniIDE.exe
-            release/OmniIDE-macOS.zip
-            release/OmniIDE-Linux.tar.gz
+            release/OmniIDE-Windows/OmniIDE.exe
+            release/OmniIDE-macOS/OmniIDE-macOS.zip
+            release/OmniIDE-Linux/OmniIDE-Linux.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

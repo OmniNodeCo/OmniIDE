@@ -1,141 +1,210 @@
-"""Built-in terminal emulator."""
+"""Find and Replace functionality."""
 
 import tkinter as tk
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
-import subprocess
-import threading
-import os
-import sys
 
 
-class Terminal:
-    """Simple integrated terminal."""
+class SearchBar:
+    """Find and Replace bar."""
 
     def __init__(self, parent, app):
         self.app = app
-        self.process = None
-        self.visible = True
+        self.visible = False
+        self.matches = []
+        self.current_match = -1
 
         self.frame = ttk.Frame(parent)
 
-        # Terminal header
-        header = ttk.Frame(self.frame)
-        header.pack(fill=X)
+        # Find row
+        find_row = ttk.Frame(self.frame)
+        find_row.pack(fill=X, padx=8, pady=(4, 0))
 
-        ttk.Label(
-            header, text="  ⌨ Terminal",
-            font=("Segoe UI", 10, "bold"),
-        ).pack(side=LEFT, padx=5)
+        ttk.Label(find_row, text="Find:", font=("Segoe UI", 10)).pack(side=LEFT)
+
+        self.find_entry = ttk.Entry(find_row, width=30)
+        self.find_entry.pack(side=LEFT, padx=(8, 4))
+        self.find_entry.bind("<Return>", self._find_next)
+        self.find_entry.bind("<KeyRelease>", self._on_find_changed)
 
         ttk.Button(
-            header, text="✕", width=3,
+            find_row, text="◀", width=3,
+            bootstyle="info-outline",
+            command=self._find_prev,
+        ).pack(side=LEFT, padx=1)
+
+        ttk.Button(
+            find_row, text="▶", width=3,
+            bootstyle="info-outline",
+            command=self._find_next,
+        ).pack(side=LEFT, padx=1)
+
+        self.match_label = ttk.Label(
+            find_row, text="", font=("Segoe UI", 9)
+        )
+        self.match_label.pack(side=LEFT, padx=8)
+
+        self.case_var = tk.BooleanVar(value=False)
+        ttk.Checkbutton(
+            find_row, text="Aa", variable=self.case_var,
+            bootstyle="info-round-toggle",
+            command=self._on_find_changed,
+        ).pack(side=LEFT, padx=4)
+
+        ttk.Button(
+            find_row, text="✕", width=3,
             bootstyle="danger-link",
-            command=self.toggle,
+            command=self.hide,
         ).pack(side=RIGHT)
 
+        # Replace row
+        replace_row = ttk.Frame(self.frame)
+        replace_row.pack(fill=X, padx=8, pady=(2, 4))
+
+        ttk.Label(replace_row, text="Replace:", font=("Segoe UI", 10)).pack(side=LEFT)
+
+        self.replace_entry = ttk.Entry(replace_row, width=30)
+        self.replace_entry.pack(side=LEFT, padx=(8, 4))
+
         ttk.Button(
-            header, text="Clear",
-            bootstyle="secondary-link",
-            command=self.clear,
-        ).pack(side=RIGHT, padx=5)
+            replace_row, text="Replace",
+            bootstyle="warning-outline",
+            command=self._replace_one,
+        ).pack(side=LEFT, padx=2)
 
-        # Terminal output
-        self.output = tk.Text(
-            self.frame,
-            height=8,
-            bg=app.colors["terminal_bg"],
-            fg=app.colors["terminal_fg"],
-            insertbackground=app.colors["accent"],
-            font=(app.settings["font_family"], app.settings["font_size"] - 1),
-            relief="flat",
-            borderwidth=0,
-            padx=8,
-            pady=4,
-        )
-        self.output.pack(fill=BOTH, expand=True)
-
-        # Input line
-        input_frame = ttk.Frame(self.frame)
-        input_frame.pack(fill=X)
-
-        cwd = os.path.basename(os.getcwd())
-        self.prompt_label = ttk.Label(
-            input_frame,
-            text=f"  {cwd} $",
-            font=(app.settings["font_family"], app.settings["font_size"] - 1),
-        )
-        self.prompt_label.pack(side=LEFT)
-
-        self.input_entry = ttk.Entry(
-            input_frame,
-            font=(app.settings["font_family"], app.settings["font_size"] - 1),
-        )
-        self.input_entry.pack(side=LEFT, fill=X, expand=True, padx=(4, 8), pady=2)
-        self.input_entry.bind("<Return>", self._execute_command)
-
-        self._write_output("OmniIDE Terminal — Type commands below\n\n")
-
-    def _execute_command(self, event=None):
-        cmd = self.input_entry.get().strip()
-        if not cmd:
-            return
-
-        self.input_entry.delete(0, "end")
-        self._write_output(f"$ {cmd}\n")
-
-        # Handle cd command
-        if cmd.startswith("cd "):
-            path = cmd[3:].strip()
-            try:
-                os.chdir(os.path.expanduser(path))
-                cwd = os.path.basename(os.getcwd())
-                self.prompt_label.configure(text=f"  {cwd} $")
-                self._write_output(f"Changed to: {os.getcwd()}\n\n")
-            except FileNotFoundError:
-                self._write_output(f"Directory not found: {path}\n\n")
-            return
-
-        if cmd == "clear" or cmd == "cls":
-            self.clear()
-            return
-
-        thread = threading.Thread(target=self._run_command, args=(cmd,), daemon=True)
-        thread.start()
-
-    def _run_command(self, cmd):
-        try:
-            shell = True
-            if sys.platform == "win32":
-                process = subprocess.Popen(
-                    cmd, shell=shell, stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT, text=True, cwd=os.getcwd(),
-                )
-            else:
-                process = subprocess.Popen(
-                    cmd, shell=shell, stdout=subprocess.PIPE,
-                    stderr=subprocess.STDOUT, text=True, cwd=os.getcwd(),
-                )
-
-            output, _ = process.communicate(timeout=30)
-            self.output.after(0, self._write_output, output + "\n")
-
-        except subprocess.TimeoutExpired:
-            self.output.after(0, self._write_output, "Command timed out.\n\n")
-        except Exception as e:
-            self.output.after(0, self._write_output, f"Error: {e}\n\n")
-
-    def _write_output(self, text):
-        self.output.insert("end", text)
-        self.output.see("end")
-
-    def clear(self):
-        self.output.delete("1.0", "end")
+        ttk.Button(
+            replace_row, text="Replace All",
+            bootstyle="warning-outline",
+            command=self._replace_all,
+        ).pack(side=LEFT, padx=2)
 
     def toggle(self):
         if self.visible:
-            self.frame.pack_forget()
-            self.visible = False
+            self.hide()
         else:
-            self.frame.pack(fill=BOTH, expand=False)
-            self.visible = True
+            self.show()
+
+    def show(self):
+        self.frame.grid(row=1, column=0, columnspan=2, sticky="ew")
+        self.visible = True
+        self.find_entry.focus_set()
+
+        editor = self.app.tab_manager.get_active_editor()
+        if editor:
+            try:
+                selected = editor.get(tk.SEL_FIRST, tk.SEL_LAST)
+                if selected:
+                    self.find_entry.delete(0, "end")
+                    self.find_entry.insert(0, selected)
+            except tk.TclError:
+                pass
+
+    def hide(self):
+        self.frame.grid_remove()
+        self.visible = False
+        self._clear_highlights()
+
+    def _on_find_changed(self, event=None):
+        self._find_all()
+
+    def _find_all(self):
+        self._clear_highlights()
+        editor = self.app.tab_manager.get_active_editor()
+        if not editor:
+            return
+
+        query = self.find_entry.get()
+        if not query:
+            self.match_label.configure(text="")
+            return
+
+        self.matches = []
+        nocase = not self.case_var.get()
+        start = "1.0"
+
+        while True:
+            pos = editor.search(query, start, stopindex="end", nocase=nocase)
+            if not pos:
+                break
+            end = f"{pos}+{len(query)}c"
+            self.matches.append((pos, end))
+            editor.tag_add("search_highlight", pos, end)
+            start = end
+
+        editor.tag_configure(
+            "search_highlight",
+            background=self.app.colors["accent"],
+            foreground="#ffffff",
+        )
+
+        count = len(self.matches)
+        self.match_label.configure(
+            text=f"{count} match{'es' if count != 1 else ''}"
+        )
+        self.current_match = 0 if count > 0 else -1
+
+    def _find_next(self, event=None):
+        if not self.matches:
+            self._find_all()
+        if not self.matches:
+            return
+
+        self.current_match = (self.current_match + 1) % len(self.matches)
+        pos, end = self.matches[self.current_match]
+        editor = self.app.tab_manager.get_active_editor()
+        if editor:
+            editor.see(pos)
+            editor.tag_remove("current_match", "1.0", "end")
+            editor.tag_add("current_match", pos, end)
+            editor.tag_configure("current_match", background="#ff6600")
+            self.match_label.configure(
+                text=f"{self.current_match + 1}/{len(self.matches)}"
+            )
+
+    def _find_prev(self):
+        if not self.matches:
+            return
+        self.current_match = (self.current_match - 1) % len(self.matches)
+        pos, end = self.matches[self.current_match]
+        editor = self.app.tab_manager.get_active_editor()
+        if editor:
+            editor.see(pos)
+            editor.tag_remove("current_match", "1.0", "end")
+            editor.tag_add("current_match", pos, end)
+            editor.tag_configure("current_match", background="#ff6600")
+            self.match_label.configure(
+                text=f"{self.current_match + 1}/{len(self.matches)}"
+            )
+
+    def _replace_one(self):
+        editor = self.app.tab_manager.get_active_editor()
+        if not editor or self.current_match < 0:
+            return
+
+        pos, end = self.matches[self.current_match]
+        replacement = self.replace_entry.get()
+        editor.delete(pos, end)
+        editor.insert(pos, replacement)
+        self._find_all()
+
+    def _replace_all(self):
+        editor = self.app.tab_manager.get_active_editor()
+        if not editor or not self.matches:
+            return
+
+        replacement = self.replace_entry.get()
+        for pos, end in reversed(self.matches):
+            editor.delete(pos, end)
+            editor.insert(pos, replacement)
+
+        count = len(self.matches)
+        self._find_all()
+        self.app.set_status(f"Replaced {count} occurrences")
+
+    def _clear_highlights(self):
+        editor = self.app.tab_manager.get_active_editor()
+        if editor:
+            editor.tag_remove("search_highlight", "1.0", "end")
+            editor.tag_remove("current_match", "1.0", "end")
+        self.matches = []
+        self.current_match = -1
