@@ -29,12 +29,10 @@ class OmniIDEApp:
 
         self.root.withdraw()
 
-        # Splash
         from src.ui.splash import SplashScreen
         self.splash = SplashScreen(self.root)
         self.splash.update_status("Loading modules...")
 
-        # Lazy imports
         from src.utils.theme_loader import ThemeLoader
         from src.utils.recent_files import RecentFilesManager
         from src.utils.shortcuts import ShortcutManager
@@ -45,6 +43,7 @@ class OmniIDEApp:
         from src.core.search import SearchBar
         from src.core.git_manager import GitManager
         from src.core.extension_manager import ExtensionManager
+        from src.core.command_palette import CommandPalette
         from src.ui.menubar import MenuBar
         from src.ui.sidebar import Sidebar
         from src.ui.statusbar import StatusBar
@@ -77,13 +76,18 @@ class OmniIDEApp:
             Terminal, SearchBar, StatusBar, MenuBar,
         )
 
+        self.splash.update_status("Initializing command palette...")
+        self.splash.set_progress(65)
+
+        self.command_palette = CommandPalette(self)
+
         self.splash.update_status("Applying styles...")
-        self.splash.set_progress(70)
+        self.splash.set_progress(75)
 
         apply_global_styles(self)
 
         self.splash.update_status("Binding shortcuts...")
-        self.splash.set_progress(85)
+        self.splash.set_progress(90)
 
         self.shortcut_manager = ShortcutManager(self)
         self.shortcut_manager.bind_all()
@@ -123,24 +127,19 @@ class OmniIDEApp:
         self.root.columnconfigure(0, weight=1)
         self.root.rowconfigure(2, weight=1)
 
-        # Row 0 — Toolbar
         self.toolbar = Toolbar(self.root, self)
         self.toolbar.frame.grid(row=0, column=0, sticky="ew")
 
-        # Row 1 — Search bar (hidden)
         self.search_bar = SearchBar(self.root, self)
         self.search_bar.frame.grid(row=1, column=0, sticky="ew")
         self.search_bar.hide()
 
-        # Row 2 — Main pane
         self.main_pane = tkttk.PanedWindow(self.root, orient=tk.HORIZONTAL)
         self.main_pane.grid(row=2, column=0, sticky="nsew")
 
-        # Sidebar
         self.sidebar = Sidebar(self.main_pane, self)
         self.main_pane.add(self.sidebar.frame, weight=0)
 
-        # Right pane (editor + terminal)
         self.right_pane = tkttk.PanedWindow(self.main_pane, orient=tk.VERTICAL)
         self.main_pane.add(self.right_pane, weight=1)
 
@@ -150,11 +149,9 @@ class OmniIDEApp:
         self.terminal = Terminal(self.right_pane, self)
         self.right_pane.add(self.terminal.frame, weight=0)
 
-        # Row 3 — Status bar
         self.statusbar = StatusBar(self.root, self)
         self.statusbar.frame.grid(row=3, column=0, sticky="ew")
 
-        # Menu bar
         self.menubar = MenuBar(self.root, self)
 
     def switch_theme(self):
@@ -191,6 +188,9 @@ class OmniIDEApp:
 
     def toggle_search(self):
         self.search_bar.toggle()
+
+    def toggle_command_palette(self):
+        self.command_palette.toggle()
 
     def open_project(self, path=None):
         if path is None:
