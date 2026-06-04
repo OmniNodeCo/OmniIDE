@@ -1,0 +1,370 @@
+name: Release OmniIDE v1.0.2
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version tag (e.g. v1.0.2)"
+        required: true
+        default: "v1.0.2"
+
+permissions:
+  contents: write
+
+env:
+  APP_NAME: OmniIDE
+  APP_VERSION: ${{ github.ref_name || github.event.inputs.version }}
+
+jobs:
+
+  # ─────────────────────────────────────────
+  # WINDOWS
+  # ─────────────────────────────────────────
+  build-windows:
+    name: "🪟 Windows"
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller pillow
+
+      - name: Generate icon
+        shell: python
+        run: |
+          import os
+          from PIL import Image, ImageDraw
+
+          os.makedirs("assets", exist_ok=True)
+          sizes = [16, 32, 48, 64, 128, 256]
+          images = []
+          for size in sizes:
+              img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+              draw = ImageDraw.Draw(img)
+              m = size // 8
+              draw.ellipse([m, m, size-m, size-m], fill=(30, 30, 46, 255))
+              i = size // 4
+              draw.ellipse([i, i, size-i, size-i], fill=(137, 180, 250, 255))
+              c = size // 2
+              d = size // 6
+              draw.ellipse([c-d, c-d, c+d, c+d], fill=(30, 30, 46, 255))
+              images.append(img)
+          images[0].save(
+              "assets/icon.ico", format="ICO",
+              sizes=[(s, s) for s in sizes],
+              append_images=images[1:],
+          )
+          images[-1].save("assets/icon.png", format="PNG")
+          print("Icons generated")
+
+      - name: Patch spec with icon
+        shell: python
+        run: |
+          with open("OmniIDE.spec", "r") as f:
+              content = f.read()
+          if "icon=" not in content:
+              content = content.replace(
+                  "entitlements_file=None,",
+                  "entitlements_file=None,\n    icon='assets/icon.ico',",
+              )
+              with open("OmniIDE.spec", "w") as f:
+                  f.write(content)
+          print("Spec patched")
+
+      - name: Build
+        run: pyinstaller OmniIDE.spec
+
+      - name: Verify
+        run: |
+          if (Test-Path "dist/OmniIDE.exe") {
+            $size = (Get-Item "dist/OmniIDE.exe").Length / 1MB
+            Write-Host "Built OmniIDE.exe ($([math]::Round($size,1)) MB)"
+          } else {
+            Write-Host "Build failed"
+            exit 1
+          }
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: OmniIDE-Windows
+          path: dist/OmniIDE.exe
+          retention-days: 5
+
+  # ─────────────────────────────────────────
+  # MACOS
+  # ─────────────────────────────────────────
+  build-macos:
+    name: "🍎 macOS"
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: |
+          brew install python-tk@3.11 || true
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller pillow
+
+      - name: Generate icon
+        shell: python3 {0}
+        run: |
+          import os
+          from PIL import Image, ImageDraw
+
+          os.makedirs("assets", exist_ok=True)
+          sizes = [16, 32, 48, 64, 128, 256, 512]
+          images = []
+          for size in sizes:
+              img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+              draw = ImageDraw.Draw(img)
+              m = size // 8
+              draw.ellipse([m, m, size-m, size-m], fill=(30, 30, 46, 255))
+              i = size // 4
+              draw.ellipse([i, i, size-i, size-i], fill=(137, 180, 250, 255))
+              c = size // 2
+              d = size // 6
+              draw.ellipse([c-d, c-d, c+d, c+d], fill=(30, 30, 46, 255))
+              images.append(img)
+          images[0].save(
+              "assets/icon.ico", format="ICO",
+              sizes=[(s, s) for s in sizes[:6]],
+              append_images=images[1:6],
+          )
+          images[-1].save("assets/icon.png", format="PNG")
+          print("Icons generated")
+
+      - name: Build
+        run: pyinstaller OmniIDE.spec
+
+      - name: Package
+        run: |
+          cd dist
+          if [ -d "OmniIDE.app" ]; then
+            zip -r OmniIDE-macOS.zip OmniIDE.app
+          else
+            chmod +x OmniIDE
+            zip -r OmniIDE-macOS.zip OmniIDE
+          fi
+          ls -lh OmniIDE-macOS.zip
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: OmniIDE-macOS
+          path: dist/OmniIDE-macOS.zip
+          retention-days: 5
+
+  # ─────────────────────────────────────────
+  # LINUX
+  # ─────────────────────────────────────────
+  build-linux:
+    name: "🐧 Linux"
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y \
+            python3-tk python3-dev tk-dev \
+            libx11-dev libxft-dev libxext-dev \
+            libffi-dev binutils
+
+      - name: Install Python deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pyinstaller pillow
+
+      - name: Generate icon
+        shell: python3 {0}
+        run: |
+          import os
+          from PIL import Image, ImageDraw
+
+          os.makedirs("assets", exist_ok=True)
+          sizes = [16, 32, 48, 64, 128, 256]
+          images = []
+          for size in sizes:
+              img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+              draw = ImageDraw.Draw(img)
+              m = size // 8
+              draw.ellipse([m, m, size-m, size-m], fill=(30, 30, 46, 255))
+              i = size // 4
+              draw.ellipse([i, i, size-i, size-i], fill=(137, 180, 250, 255))
+              c = size // 2
+              d = size // 6
+              draw.ellipse([c-d, c-d, c+d, c+d], fill=(30, 30, 46, 255))
+              images.append(img)
+          images[0].save(
+              "assets/icon.ico", format="ICO",
+              sizes=[(s, s) for s in sizes],
+              append_images=images[1:],
+          )
+          images[-1].save("assets/icon.png", format="PNG")
+          print("Icons generated")
+
+      - name: Build
+        run: pyinstaller OmniIDE.spec
+
+      - name: Package
+        run: |
+          chmod +x dist/OmniIDE
+          cd dist
+          tar -czvf OmniIDE-Linux.tar.gz OmniIDE
+          ls -lh OmniIDE-Linux.tar.gz
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: OmniIDE-Linux
+          path: dist/OmniIDE-Linux.tar.gz
+          retention-days: 5
+
+  # ─────────────────────────────────────────
+  # RELEASE
+  # ─────────────────────────────────────────
+  release:
+    name: "🚀 Publish Release"
+    runs-on: ubuntu-latest
+    needs: [build-windows, build-macos, build-linux]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download Windows
+        uses: actions/download-artifact@v4
+        with:
+          name: OmniIDE-Windows
+          path: release/windows/
+
+      - name: Download macOS
+        uses: actions/download-artifact@v4
+        with:
+          name: OmniIDE-macOS
+          path: release/macos/
+
+      - name: Download Linux
+        uses: actions/download-artifact@v4
+        with:
+          name: OmniIDE-Linux
+          path: release/linux/
+
+      - name: List files
+        run: find release/ -type f -exec ls -lh {} \;
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          cat << 'CHANGES' > changelog.md
+          ## What's New in v1.0.2
+
+          ### Bug Fixes
+          - **Fixed button hover** — buttons no longer stay highlighted after mouse leaves
+          - **Fixed deferred menu bindings** — command palette loads safely after UI init
+          - **Fixed PanedWindow crash** — uses tkinter.ttk instead of ttkbootstrap
+          - **Fixed search bar crash** — safe access to tab_manager during startup
+          - **Fixed icon missing** — auto-generates icon.ico during CI build
+
+          ### New Features
+          - **Command Palette** (Ctrl+Shift+P) — 50+ fuzzy-searchable commands
+          - **Go to Line** (Ctrl+G) — jump to any line number
+          - **Toggle Comment** (Ctrl+/) — comment/uncomment with language detection
+          - **Duplicate / Delete / Move Line** — via command palette
+          - **Word Wrap Toggle** — per-session toggle from command palette
+          - **Zoom Reset** (Ctrl+0) — reset font size to default
+          - **VS Code Extensions** — browse and install from marketplace
+          - **Git Integration** — clone, init, commit, push, pull, branches, diff, log
+          - **Real Terminal** — interactive shell (Bash/PowerShell/CMD/Zsh)
+          - **Shell Selector** — dropdown to pick terminal shell per OS
+          - **Startup Splash** — animated loading screen with progress bar
+          - **SVG Icon System** — custom rendered icons, no emoji dependencies
+          - **Organized Sidebar** — tabbed panels: Explorer, Git, Extensions
+          - **Round Modern Buttons** — with proper hover/leave animations
+          - **Settings Persistence** — saves to ~/.omniide/settings.json
+
+          ### Keyboard Shortcuts
+          | Action | Shortcut |
+          |--------|----------|
+          | Command Palette | Ctrl+Shift+P |
+          | New File | Ctrl+N |
+          | Open File | Ctrl+O |
+          | Save | Ctrl+S |
+          | Close Tab | Ctrl+W |
+          | Find & Replace | Ctrl+F |
+          | Go to Line | Ctrl+G |
+          | Toggle Comment | Ctrl+/ |
+          | Toggle Sidebar | Ctrl+B |
+          | Toggle Terminal | Ctrl+\` |
+          | Zoom In | Ctrl++ |
+          | Zoom Out | Ctrl+- |
+          | Reset Zoom | Ctrl+0 |
+          CHANGES
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "OmniIDE ${{ env.APP_VERSION }}"
+          tag_name: ${{ env.APP_VERSION }}
+          body_path: changelog.md
+          draft: false
+          prerelease: false
+          make_latest: true
+          files: |
+            release/windows/OmniIDE.exe
+            release/macos/OmniIDE-macOS.zip
+            release/linux/OmniIDE-Linux.tar.gz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Summary
+        run: |
+          echo "## Release Published" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Version:** ${{ env.APP_VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "| Platform | File | Size |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|------|------|" >> $GITHUB_STEP_SUMMARY
+
+          WIN_SIZE=$(du -h release/windows/OmniIDE.exe | cut -f1)
+          MAC_SIZE=$(du -h release/macos/OmniIDE-macOS.zip | cut -f1)
+          LIN_SIZE=$(du -h release/linux/OmniIDE-Linux.tar.gz | cut -f1)
+
+          echo "| Windows | OmniIDE.exe | $WIN_SIZE |" >> $GITHUB_STEP_SUMMARY
+          echo "| macOS | OmniIDE-macOS.zip | $MAC_SIZE |" >> $GITHUB_STEP_SUMMARY
+          echo "| Linux | OmniIDE-Linux.tar.gz | $LIN_SIZE |" >> $GITHUB_STEP_SUMMARY
