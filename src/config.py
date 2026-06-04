@@ -4,10 +4,9 @@ import os
 import sys
 
 APP_NAME = "OmniIDE"
-APP_VERSION = "1.0.1"
+APP_VERSION = "1.0.2"
 APP_AUTHOR = "OmniNodeCo"
 
-# Handle PyInstaller bundle paths
 if getattr(sys, 'frozen', False):
     BASE_DIR = sys._MEIPASS
 else:
@@ -24,7 +23,6 @@ EXTENSIONS_DIR = os.path.join(CONFIG_DIR, "extensions")
 os.makedirs(CONFIG_DIR, exist_ok=True)
 os.makedirs(EXTENSIONS_DIR, exist_ok=True)
 
-# VS Code Marketplace API
 VSCODE_MARKETPLACE_URL = "https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery"
 VSCODE_MARKETPLACE_VERSION = "7.2-preview.1"
 

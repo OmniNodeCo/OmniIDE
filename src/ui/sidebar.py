@@ -1,4 +1,4 @@
-"""Sidebar with organized tabbed panels: Explorer, Git, Extensions."""
+"""Sidebar with organized tabbed panels — fixed hover buttons."""
 
 import tkinter as tk
 import ttkbootstrap as ttk
@@ -24,24 +24,22 @@ class Sidebar:
 
         self._build_tab_bar()
         self._build_panels()
-
-        # Show explorer by default
         self._switch_panel("explorer")
 
     def _build_tab_bar(self):
-        """Build the icon tab bar at the top."""
+        """Icon tab bar at top."""
         self.tab_bar = ttk.Frame(self.frame)
         self.tab_bar.pack(fill=X, padx=4, pady=(4, 0))
 
         self.tab_buttons = {}
 
         tabs = [
-            ("explorer", "explorer", "Explorer"),
-            ("git", "folder_git", "Git"),
-            ("extensions", "settings", "Extensions"),
+            ("explorer", "explorer"),
+            ("git", "folder_git"),
+            ("extensions", "settings"),
         ]
 
-        for tab_id, icon_name, tooltip in tabs:
+        for tab_id, icon_name in tabs:
             icon = self.icon_mgr.get(icon_name, 16)
             self._icon_refs.append(icon)
 
@@ -54,29 +52,29 @@ class Sidebar:
                 cursor="hand2",
             )
             btn.pack(side=LEFT, padx=1)
+
+            # Store base style for tab buttons
+            btn._base_style = "secondary-link"
+            btn._active_style = "info"
+            btn._tab_id = tab_id
+
             self.tab_buttons[tab_id] = btn
 
         ttk.Separator(self.frame).pack(fill=X, padx=4, pady=(4, 0))
 
     def _build_panels(self):
-        """Build all sidebar panels (stacked, only one visible)."""
+        """Build all sidebar panels."""
         self.panels = {}
-
-        # ── Explorer panel ──
         self.panels["explorer"] = self._build_explorer()
-
-        # ── Git panel ──
         self.panels["git"] = self._build_git()
 
-        # ── Extensions panel ──
         ext_panel = ExtensionsPanel(self.frame, self.app)
         self.panels["extensions"] = ext_panel.frame
 
     def _build_explorer(self):
-        """Build the file explorer panel."""
+        """File explorer panel."""
         panel = ttk.Frame(self.frame)
 
-        # Header
         header = ttk.Frame(panel)
         header.pack(fill=X, padx=8, pady=(8, 4))
 
@@ -90,8 +88,6 @@ class Sidebar:
         ).pack(side=LEFT)
 
         open_icon = self.icon_mgr.get("open_file", 14)
-        self._icon_refs.append(open_icon)
-
         make_icon_btn(
             header, open_icon,
             self.app.open_project, "info",
@@ -100,7 +96,6 @@ class Sidebar:
 
         ttk.Separator(panel).pack(fill=X, padx=8, pady=4)
 
-        # Action buttons
         actions = ttk.Frame(panel)
         actions.pack(fill=X, padx=8, pady=(0, 4))
 
@@ -120,17 +115,15 @@ class Sidebar:
 
         ttk.Separator(panel).pack(fill=X, padx=8, pady=4)
 
-        # File tree
         self.file_tree = FileTree(panel, self.app)
         self.file_tree.frame.pack(fill=BOTH, expand=True, padx=4, pady=4)
 
         return panel
 
     def _build_git(self):
-        """Build the Git panel with organized sections."""
+        """Git panel with organized sections."""
         panel = ttk.Frame(self.frame)
 
-        # Header
         header = ttk.Frame(panel)
         header.pack(fill=X, padx=8, pady=(8, 4))
 
@@ -147,12 +140,11 @@ class Sidebar:
 
         gm = self.app.git_manager
 
-        # ── Repository section ──
-        repo_label = ttk.Label(
+        # Repository section
+        ttk.Label(
             panel, text="  Repository",
             font=("Segoe UI", 9, "bold"),
-        )
-        repo_label.pack(anchor="w", padx=8, pady=(4, 2))
+        ).pack(anchor="w", padx=8, pady=(4, 2))
 
         repo_btns = ttk.Frame(panel)
         repo_btns.pack(fill=X, padx=8, pady=(0, 4))
@@ -174,7 +166,7 @@ class Sidebar:
 
         ttk.Separator(panel).pack(fill=X, padx=8, pady=4)
 
-        # ── Changes section ──
+        # Changes section
         ttk.Label(
             panel, text="  Changes",
             font=("Segoe UI", 9, "bold"),
@@ -200,7 +192,7 @@ class Sidebar:
 
         ttk.Separator(panel).pack(fill=X, padx=8, pady=4)
 
-        # ── Commit section ──
+        # Commit & Sync section
         ttk.Label(
             panel, text="  Commit & Sync",
             font=("Segoe UI", 9, "bold"),
@@ -214,25 +206,22 @@ class Sidebar:
             gm.git_commit, "success", self._icon_refs,
         ).pack(fill=X, pady=1)
 
-        # Push / Pull in a row
         sync_row = ttk.Frame(commit_btns)
         sync_row.pack(fill=X, pady=1)
 
-        push_btn = make_round_btn(
+        make_round_btn(
             sync_row, "Push", self.icon_mgr.get("arrow_right", 14),
             gm.git_push, "info", self._icon_refs,
-        )
-        push_btn.pack(side=LEFT, fill=X, expand=True, padx=(0, 2))
+        ).pack(side=LEFT, fill=X, expand=True, padx=(0, 2))
 
-        pull_btn = make_round_btn(
+        make_round_btn(
             sync_row, "Pull", self.icon_mgr.get("arrow_left", 14),
             gm.git_pull, "info", self._icon_refs,
-        )
-        pull_btn.pack(side=LEFT, fill=X, expand=True, padx=(2, 0))
+        ).pack(side=LEFT, fill=X, expand=True, padx=(2, 0))
 
         ttk.Separator(panel).pack(fill=X, padx=8, pady=4)
 
-        # ── History section ──
+        # History section
         ttk.Label(
             panel, text="  History",
             font=("Segoe UI", 9, "bold"),
@@ -254,15 +243,13 @@ class Sidebar:
         return panel
 
     def _switch_panel(self, panel_id):
-        """Switch visible panel."""
-        # Hide all panels
+        """Switch visible panel and update tab highlights."""
         for pid, panel in self.panels.items():
             panel.pack_forget()
 
-        # Show selected
         self.panels[panel_id].pack(fill=BOTH, expand=True)
 
-        # Update tab button styles
+        # Reset ALL tab buttons to base style, then highlight active
         for tid, btn in self.tab_buttons.items():
             if tid == panel_id:
                 btn.configure(bootstyle="info")

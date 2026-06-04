@@ -1,4 +1,4 @@
-"""Top toolbar with organized round buttons."""
+"""Top toolbar with properly hovering round buttons."""
 
 import tkinter as tk
 import ttkbootstrap as ttk
@@ -9,7 +9,7 @@ from src.utils.styles import make_round_btn
 
 
 class Toolbar:
-    """Top action toolbar with modern round buttons."""
+    """Top action toolbar."""
 
     def __init__(self, parent, app):
         self.app = app
@@ -18,7 +18,6 @@ class Toolbar:
 
         self.frame = ttk.Frame(parent, padding=(6, 4))
 
-        # ── File section ──
         make_round_btn(
             self.frame, "New",
             self.icon_mgr.get("new_file", 14),
@@ -42,7 +41,6 @@ class Toolbar:
 
         self._sep()
 
-        # ── Edit section ──
         make_round_btn(
             self.frame, "Find",
             self.icon_mgr.get("search", 14),
@@ -52,7 +50,6 @@ class Toolbar:
 
         self._sep()
 
-        # ── View section ──
         make_round_btn(
             self.frame, "Theme",
             self.icon_mgr.get("theme", 14),
@@ -61,7 +58,6 @@ class Toolbar:
         ).pack(side=LEFT, padx=2)
 
     def _sep(self):
-        """Add a vertical separator."""
         ttk.Separator(self.frame, orient=VERTICAL).pack(
             side=LEFT, fill=tk.Y, padx=8, pady=3
         )
