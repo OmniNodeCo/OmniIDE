@@ -36,6 +36,8 @@ hidden_imports = [
     "src.core.search",
     "src.core.git_manager",
     "src.core.extension_manager",
+    "src.core.command_palette",
+    "src.core.updater",
     "src.ui",
     "src.ui.menubar",
     "src.ui.sidebar",
@@ -45,6 +47,7 @@ hidden_imports = [
     "src.ui.welcome",
     "src.ui.splash",
     "src.ui.extensions_panel",
+    "src.ui.settings_panel",
     "src.utils",
     "src.utils.theme_loader",
     "src.utils.recent_files",
@@ -69,6 +72,8 @@ hidden_imports = [
     "urllib.request",
     "urllib.error",
     "zipfile",
+    "webbrowser",
+    "tkinter.font",
 ]
 
 datas = [

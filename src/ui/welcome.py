@@ -1,4 +1,4 @@
-"""Welcome tab — v1.0.1."""
+"""Welcome tab — v1.0.3."""
 
 from src.config import APP_NAME, APP_VERSION, APP_AUTHOR
 
@@ -52,9 +52,14 @@ class WelcomeTab:
       Ctrl+O          Open File
       Ctrl+S          Save
       Ctrl+F          Find & Replace
+      Ctrl+G          Go to Line
+      Ctrl+/          Toggle Comment
       Ctrl+B          Toggle Sidebar
       Ctrl+`          Toggle Terminal
+      Ctrl+Shift+P    Command Palette
+      Ctrl+,          Settings
       Ctrl++/-        Zoom In / Out
+      Ctrl+0          Reset Zoom
       Ctrl+W          Close Tab
 
     ---------------------------------------------
@@ -63,17 +68,28 @@ class WelcomeTab:
 
     Sidebar Panels:
 
-      [Explorer]    File tree and project browser
-      [Git]         Source control (git {git_ok})
-      [Extensions]  Browse VS Code Marketplace
+      [Explorer]      File tree and project browser
+      [Git]           Source control (git {git_ok})
+      [Extensions]    Browse VS Code Marketplace
 
-    Extensions:      {ext_count} installed
+    Extensions:       {ext_count} installed
 
     Terminal:
 
       Select shell: Bash / PowerShell / CMD / Zsh
       Full interactive shell with history
       Ctrl+C sends interrupt
+
+    Settings:
+
+      File > Settings or Ctrl+,
+      Change theme, font, tab size, and more
+      Auto-check for updates on startup
+
+    Updates:
+
+      Help > Check for Updates
+      Auto-checks on startup (configurable)
 
     ---------------------------------------------
 

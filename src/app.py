@@ -1,4 +1,4 @@
-"""Main application — v1.0.1."""
+"""Main application — v1.0.3."""
 
 import tkinter as tk
 import tkinter.ttk as tkttk
@@ -44,32 +44,36 @@ class OmniIDEApp:
         from src.core.git_manager import GitManager
         from src.core.extension_manager import ExtensionManager
         from src.core.command_palette import CommandPalette
+        from src.core.updater import Updater
         from src.ui.menubar import MenuBar
         from src.ui.sidebar import Sidebar
         from src.ui.statusbar import StatusBar
         from src.ui.toolbar import Toolbar
         from src.ui.welcome import WelcomeTab
+        from src.ui.settings_panel import SettingsPanel
 
         self._WelcomeTab = WelcomeTab
 
         self.splash.update_status("Loading theme...")
-        self.splash.set_progress(15)
+        self.splash.set_progress(10)
 
         self.theme_loader = ThemeLoader(self.settings["theme"])
         self.colors = self.theme_loader.colors
         self.syntax_colors = self.theme_loader.syntax
 
         self.splash.update_status("Initializing managers...")
-        self.splash.set_progress(30)
+        self.splash.set_progress(25)
 
         self.recent_files_manager = RecentFilesManager()
         self.file_manager = FileManager(self)
         self.git_manager = GitManager(self)
         self.extension_manager = ExtensionManager(self)
+        self.updater = Updater(self)
+        self.settings_panel = SettingsPanel(self)
         self.current_project_path = None
 
         self.splash.update_status("Building interface...")
-        self.splash.set_progress(50)
+        self.splash.set_progress(45)
 
         self._build_ui(
             Toolbar, Sidebar, TabManager,
@@ -77,7 +81,7 @@ class OmniIDEApp:
         )
 
         self.splash.update_status("Initializing command palette...")
-        self.splash.set_progress(65)
+        self.splash.set_progress(60)
 
         self.command_palette = CommandPalette(self)
 
@@ -87,7 +91,7 @@ class OmniIDEApp:
         apply_global_styles(self)
 
         self.splash.update_status("Binding shortcuts...")
-        self.splash.set_progress(90)
+        self.splash.set_progress(88)
 
         self.shortcut_manager = ShortcutManager(self)
         self.shortcut_manager.bind_all()
@@ -102,6 +106,9 @@ class OmniIDEApp:
         self.root.deiconify()
         self._show_welcome()
         self.root.focus_force()
+
+        # Auto check for updates
+        self.updater.check_on_startup()
 
     def _load_settings(self):
         if os.path.exists(SETTINGS_PATH):
@@ -191,6 +198,12 @@ class OmniIDEApp:
 
     def toggle_command_palette(self):
         self.command_palette.toggle()
+
+    def open_settings(self):
+        self.settings_panel.show()
+
+    def check_for_updates(self):
+        self.updater.check_now(silent=False)
 
     def open_project(self, path=None):
         if path is None:

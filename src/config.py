@@ -4,8 +4,11 @@ import os
 import sys
 
 APP_NAME = "OmniIDE"
-APP_VERSION = "1.0.2"
+APP_VERSION = "1.0.3"
 APP_AUTHOR = "OmniNodeCo"
+APP_REPO = "OmniNodeCo/OmniIDE"
+APP_GITHUB_API = f"https://api.github.com/repos/{APP_REPO}/releases/latest"
+APP_RELEASES_URL = f"https://github.com/{APP_REPO}/releases"
 
 if getattr(sys, 'frozen', False):
     BASE_DIR = sys._MEIPASS
@@ -34,6 +37,8 @@ DEFAULT_SETTINGS = {
     "show_line_numbers": True,
     "word_wrap": False,
     "auto_indent": True,
+    "auto_save": False,
+    "auto_check_updates": True,
     "window_width": 1200,
     "window_height": 750,
     "sidebar_width": 280,
@@ -41,6 +46,10 @@ DEFAULT_SETTINGS = {
     "max_recent_files": 15,
     "default_shell": "auto",
     "installed_extensions": [],
+    "highlight_current_line": True,
+    "show_whitespace": False,
+    "cursor_blink": True,
+    "minimap_enabled": False,
 }
 
 SUPPORTED_EXTENSIONS = {
@@ -83,4 +92,23 @@ FILE_DIALOG_TYPES = [
     ("JSON", "*.json"),
     ("Text", "*.txt"),
     ("Markdown", "*.md"),
+]
+
+# Available font families to show in settings
+FONT_OPTIONS = [
+    "Consolas",
+    "Courier New",
+    "Fira Code",
+    "JetBrains Mono",
+    "Source Code Pro",
+    "Cascadia Code",
+    "Menlo",
+    "Monaco",
+    "DejaVu Sans Mono",
+    "Ubuntu Mono",
+    "Inconsolata",
+    "Hack",
+    "IBM Plex Mono",
+    "Roboto Mono",
+    "SF Mono",
 ]
