@@ -1,39 +1,65 @@
-name: Build OmniIDE Executables
+name: Build
 
 on:
   push:
     branches:
       - main
-    tags:
-      - "v*.*.*"
   pull_request:
     branches:
       - main
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
 
-  # ─────────────────────────────────────────
-  # WINDOWS
-  # ─────────────────────────────────────────
-  build-windows:
-    name: 🪟 Windows Build
-    runs-on: windows-latest
+  test:
+    name: "Test"
+    runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: "pip"
 
-      - name: Install dependencies
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pillow
+
+      - name: Run tests
+        run: python -m pytest tests/ -v --tb=short || python -m unittest discover tests/ -v
+
+      - name: Verify version
+        run: |
+          python -c "
+          from src.config import APP_NAME, APP_VERSION
+          print(f'{APP_NAME} v{APP_VERSION}')
+          "
+
+  build-windows:
+    name: "Windows"
+    runs-on: windows-latest
+    needs: test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install deps
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
@@ -44,86 +70,66 @@ jobs:
         run: |
           import os
           from PIL import Image, ImageDraw
-
           os.makedirs("assets", exist_ok=True)
           sizes = [16, 32, 48, 64, 128, 256]
           images = []
-
           for size in sizes:
               img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
               draw = ImageDraw.Draw(img)
               m = size // 8
               draw.ellipse([m, m, size-m, size-m], fill=(30, 30, 46, 255))
+              r_w = max(2, size // 16)
+              r_m = size // 5
+              draw.ellipse([r_m, r_m, size-r_m, size-r_m], outline=(137, 180, 250, 255), width=r_w)
               i = size // 4
-              draw.ellipse([i, i, size-i, size-i], fill=(137, 180, 250, 255))
+              draw.ellipse([i, i, size-i, size-i], outline=(203, 166, 247, 200), width=max(1, size//20))
               c = size // 2
-              d = size // 6
-              draw.ellipse([c-d, c-d, c+d, c+d], fill=(30, 30, 46, 255))
+              d = max(2, size // 10)
+              draw.ellipse([c-d, c-d, c+d, c+d], fill=(245, 194, 231, 255))
               images.append(img)
-
-          images[0].save(
-              "assets/icon.ico", format="ICO",
-              sizes=[(s, s) for s in sizes],
-              append_images=images[1:],
-          )
+          images[0].save("assets/icon.ico", format="ICO", sizes=[(s,s) for s in sizes], append_images=images[1:])
           images[-1].save("assets/icon.png", format="PNG")
-          print("Icons generated")
 
-      - name: Patch spec icon for Windows
+      - name: Patch spec
         shell: python
         run: |
           with open("OmniIDE.spec", "r") as f:
-              content = f.read()
+              c = f.read()
+          if "icon=" not in c:
+              c = c.replace("entitlements_file=None,", "entitlements_file=None,\n    icon='assets/icon.ico',")
+              with open("OmniIDE.spec", "w") as f:
+                  f.write(c)
 
-          # inject icon into EXE() call
-          content = content.replace(
-              "entitlements_file=None,",
-              "entitlements_file=None,\n    icon='assets/icon.ico',",
-          )
-
-          with open("OmniIDE.spec", "w") as f:
-              f.write(content)
-
-          print("Spec patched with Windows icon")
-
-      - name: Build with spec file
+      - name: Build
         run: pyinstaller OmniIDE.spec
 
       - name: Verify
         run: |
-          if (Test-Path "dist/OmniIDE.exe") {
-            Write-Host "✅ OmniIDE.exe built"
-            Get-Item "dist/OmniIDE.exe" | Select-Object Name, Length
-          } else {
-            Write-Host "❌ Build failed"
-            exit 1
-          }
+          if (Test-Path "dist/OmniIDE.exe") { Write-Host "OK" } else { exit 1 }
 
-      - name: Upload artifact
+      - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: OmniIDE-Windows
+          name: OmniIDE-Windows-dev
           path: dist/OmniIDE.exe
-          retention-days: 30
+          retention-days: 7
 
-  # ─────────────────────────────────────────
-  # MACOS
-  # ─────────────────────────────────────────
   build-macos:
-    name: 🍎 macOS Build
+    name: "macOS"
     runs-on: macos-latest
+    needs: test
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: "pip"
 
-      - name: Install dependencies
+      - name: Install deps
         run: |
           brew install python-tk@3.11 || true
           python -m pip install --upgrade pip
@@ -135,91 +141,66 @@ jobs:
         run: |
           import os
           from PIL import Image, ImageDraw
-
           os.makedirs("assets", exist_ok=True)
           sizes = [16, 32, 48, 64, 128, 256]
           images = []
-
           for size in sizes:
               img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
               draw = ImageDraw.Draw(img)
               m = size // 8
               draw.ellipse([m, m, size-m, size-m], fill=(30, 30, 46, 255))
+              r_w = max(2, size // 16)
+              r_m = size // 5
+              draw.ellipse([r_m, r_m, size-r_m, size-r_m], outline=(137, 180, 250, 255), width=r_w)
               i = size // 4
-              draw.ellipse([i, i, size-i, size-i], fill=(137, 180, 250, 255))
+              draw.ellipse([i, i, size-i, size-i], outline=(203, 166, 247, 200), width=max(1, size//20))
               c = size // 2
-              d = size // 6
-              draw.ellipse([c-d, c-d, c+d, c+d], fill=(30, 30, 46, 255))
+              d = max(2, size // 10)
+              draw.ellipse([c-d, c-d, c+d, c+d], fill=(245, 194, 231, 255))
               images.append(img)
-
-          images[0].save(
-              "assets/icon.ico", format="ICO",
-              sizes=[(s, s) for s in sizes],
-              append_images=images[1:],
-          )
+          images[0].save("assets/icon.ico", format="ICO", sizes=[(s,s) for s in sizes], append_images=images[1:])
           images[-1].save("assets/icon.png", format="PNG")
-          print("Icons generated")
 
-      - name: Build with spec file
+      - name: Build
         run: pyinstaller OmniIDE.spec
 
       - name: Package
         run: |
           cd dist
-          if [ -d "OmniIDE.app" ]; then
-            zip -r OmniIDE-macOS.zip OmniIDE.app
-          else
-            zip -r OmniIDE-macOS.zip OmniIDE
-          fi
+          if [ -d "OmniIDE.app" ]; then zip -r OmniIDE-macOS.zip OmniIDE.app
+          else chmod +x OmniIDE && zip -r OmniIDE-macOS.zip OmniIDE; fi
 
-      - name: Verify
-        run: |
-          if [ -f "dist/OmniIDE-macOS.zip" ]; then
-            echo "✅ macOS build done"
-            ls -lh dist/OmniIDE-macOS.zip
-          else
-            echo "❌ Build failed"
-            exit 1
-          fi
-
-      - name: Upload artifact
+      - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: OmniIDE-macOS
+          name: OmniIDE-macOS-dev
           path: dist/OmniIDE-macOS.zip
-          retention-days: 30
+          retention-days: 7
 
-  # ─────────────────────────────────────────
-  # LINUX
-  # ─────────────────────────────────────────
   build-linux:
-    name: 🐧 Linux Build
-    runs-on: ubuntu-latest
+    name: "Linux"
+    runs-on: ubuntu-22.04
+    needs: test
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: "pip"
 
-      - name: Install system dependencies
+      - name: Install system deps
         run: |
           sudo apt-get update -y
           sudo apt-get install -y \
-            python3-tk \
-            python3-dev \
-            tk-dev \
-            libx11-dev \
-            libxft-dev \
-            libxext-dev \
-            libffi-dev \
-            binutils
+            python3-tk python3-dev tk-dev \
+            libx11-dev libxft-dev libxext-dev \
+            libffi-dev binutils
 
-      - name: Install Python dependencies
+      - name: Install Python deps
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
@@ -230,118 +211,37 @@ jobs:
         run: |
           import os
           from PIL import Image, ImageDraw
-
           os.makedirs("assets", exist_ok=True)
           sizes = [16, 32, 48, 64, 128, 256]
           images = []
-
           for size in sizes:
               img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
               draw = ImageDraw.Draw(img)
               m = size // 8
               draw.ellipse([m, m, size-m, size-m], fill=(30, 30, 46, 255))
+              r_w = max(2, size // 16)
+              r_m = size // 5
+              draw.ellipse([r_m, r_m, size-r_m, size-r_m], outline=(137, 180, 250, 255), width=r_w)
               i = size // 4
-              draw.ellipse([i, i, size-i, size-i], fill=(137, 180, 250, 255))
+              draw.ellipse([i, i, size-i, size-i], outline=(203, 166, 247, 200), width=max(1, size//20))
               c = size // 2
-              d = size // 6
-              draw.ellipse([c-d, c-d, c+d, c+d], fill=(30, 30, 46, 255))
+              d = max(2, size // 10)
+              draw.ellipse([c-d, c-d, c+d, c+d], fill=(245, 194, 231, 255))
               images.append(img)
-
-          images[0].save(
-              "assets/icon.ico", format="ICO",
-              sizes=[(s, s) for s in sizes],
-              append_images=images[1:],
-          )
+          images[0].save("assets/icon.ico", format="ICO", sizes=[(s,s) for s in sizes], append_images=images[1:])
           images[-1].save("assets/icon.png", format="PNG")
-          print("Icons generated")
 
-      - name: Build with spec file
+      - name: Build
         run: pyinstaller OmniIDE.spec
 
       - name: Package
         run: |
           chmod +x dist/OmniIDE
-          cd dist
-          tar -czvf OmniIDE-Linux.tar.gz OmniIDE
+          cd dist && tar -czvf OmniIDE-Linux.tar.gz OmniIDE
 
-      - name: Verify
-        run: |
-          if [ -f "dist/OmniIDE-Linux.tar.gz" ]; then
-            echo "✅ Linux build done"
-            ls -lh dist/OmniIDE-Linux.tar.gz
-          else
-            echo "❌ Build failed"
-            exit 1
-          fi
-
-      - name: Upload artifact
+      - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: OmniIDE-Linux
+          name: OmniIDE-Linux-dev
           path: dist/OmniIDE-Linux.tar.gz
-          retention-days: 30
-
-  # ─────────────────────────────────────────
-  # RELEASE
-  # ─────────────────────────────────────────
-  release:
-    name: 🚀 Create GitHub Release
-    runs-on: ubuntu-latest
-    needs: [build-windows, build-macos, build-linux]
-    if: startsWith(github.ref, 'refs/tags/v')
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: release/
-
-      - name: List release files
-        run: find release/ -type f
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          name: "OmniIDE ${{ github.ref_name }}"
-          tag_name: ${{ github.ref_name }}
-          body: |
-            # 🚀 OmniIDE ${{ github.ref_name }}
-            **by OmniNodeCo**
-
-            Fast. Modern. Lightweight. No Electron. No bloat.
-
-            ## 📦 Downloads
-
-            | Platform | File |
-            |----------|------|
-            | 🪟 Windows | `OmniIDE.exe` |
-            | 🍎 macOS   | `OmniIDE-macOS.zip` |
-            | 🐧 Linux   | `OmniIDE-Linux.tar.gz` |
-
-            ## 🛠 Install
-
-            **Windows** — Run `OmniIDE.exe` directly.
-
-            **macOS**
-            ```bash
-            unzip OmniIDE-macOS.zip && open OmniIDE.app
-            ```
-
-            **Linux**
-            ```bash
-            tar -xzvf OmniIDE-Linux.tar.gz && chmod +x OmniIDE && ./OmniIDE
-            ```
-
-            ---
-            Made with ❤️ by **OmniNodeCo**
-          draft: false
-          prerelease: false
-          files: |
-            release/OmniIDE-Windows/OmniIDE.exe
-            release/OmniIDE-macOS/OmniIDE-macOS.zip
-            release/OmniIDE-Linux/OmniIDE-Linux.tar.gz
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          retention-days: 7

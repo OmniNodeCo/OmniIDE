@@ -1,30 +1,32 @@
 name: Track Views
 
 on:
-  schedule:
-    # Run every 6 hours
-    - cron: "0 */6 * * *"
+  push:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  track:
-    name: Update View Counter
+  update-readme-counter:
+    name: Update View Badge
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Track traffic
-        uses: yi-Xu-0100/traffic-to-badge@v1.9.2
-        with:
-          static_list: '[]'
-          traffic_branch: traffic
-          views_color: '89b4fa'
-          clones_color: 'cba6f7'
-          logo: github
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Verify badge exists in README
+        run: |
+          if grep -q "komarev.com/ghpvc" README.md; then
+            echo "View counter badge found in README.md"
+          else
+            echo "Warning: No komarev badge found in README.md"
+            echo "Add this to your README.md:"
+            echo '![Views](https://komarev.com/ghpvc/?username=OmniNodeCo-OmniIDE&label=Views&color=89b4fa&style=for-the-badge&abbreviated=true)'
+          fi
+
+      - name: Done
+        run: echo "View counter is handled by komarev.com badge in README — no action needed"
