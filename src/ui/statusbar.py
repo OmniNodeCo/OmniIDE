@@ -1,4 +1,4 @@
-"""Status bar with Git branch display."""
+"""Status bar — VS Code style with sections."""
 
 import os
 import ttkbootstrap as ttk
@@ -9,14 +9,14 @@ from src.utils.icon_manager import IconManager
 
 
 class StatusBar:
-    """Bottom status bar with Git info."""
+    """Bottom status bar."""
 
     def __init__(self, parent, app):
         self.app = app
         self.icon_mgr = IconManager()
         self._icon_refs = []
 
-        self.frame = ttk.Frame(parent, padding=(4, 2))
+        self.frame = ttk.Frame(parent, padding=(6, 2, 6, 2))
 
         # Left — status message
         info_icon = self.icon_mgr.get("info", 12)
@@ -24,7 +24,7 @@ class StatusBar:
 
         self.status_label = ttk.Label(
             self.frame,
-            text=f"  {APP_NAME} v{APP_VERSION} — Ready",
+            text=f" {APP_NAME} v{APP_VERSION} — Ready",
             image=info_icon,
             compound=LEFT,
             font=("Segoe UI", 9),
@@ -32,32 +32,32 @@ class StatusBar:
         )
         self.status_label.pack(side=LEFT)
 
-        # Right — cursor position
+        # Right — cursor
         self.cursor_label = ttk.Label(
             self.frame,
-            text="Ln 1, Col 1  ",
+            text="Ln 1, Col 1",
             font=("Segoe UI", 9),
             style="Status.TLabel",
         )
-        self.cursor_label.pack(side=RIGHT)
+        self.cursor_label.pack(side=RIGHT, padx=(12, 4))
 
         # File type
         self.filetype_label = ttk.Label(
             self.frame,
-            text="  Text  ",
+            text="Text",
             font=("Segoe UI", 9),
             style="Status.TLabel",
         )
-        self.filetype_label.pack(side=RIGHT, padx=(0, 12))
+        self.filetype_label.pack(side=RIGHT, padx=(12, 0))
 
         # Encoding
         self.encoding_label = ttk.Label(
             self.frame,
-            text="  UTF-8  ",
+            text="UTF-8",
             font=("Segoe UI", 9),
             style="Status.TLabel",
         )
-        self.encoding_label.pack(side=RIGHT, padx=(0, 12))
+        self.encoding_label.pack(side=RIGHT, padx=(12, 0))
 
         # Git branch
         git_icon = self.icon_mgr.get("folder_git", 12)
@@ -71,16 +71,16 @@ class StatusBar:
             font=("Segoe UI", 9),
             style="Status.TLabel",
         )
-        self.git_label.pack(side=RIGHT, padx=(0, 12))
+        self.git_label.pack(side=RIGHT, padx=(12, 0))
 
     def set_text(self, text):
-        self.status_label.configure(text=f"  {text}")
+        self.status_label.configure(text=f" {text}")
 
     def update_cursor_position(self, editor):
         try:
             pos = editor.index("insert")
             line, col = pos.split(".")
-            self.cursor_label.configure(text=f"Ln {line}, Col {int(col) + 1}  ")
+            self.cursor_label.configure(text=f"Ln {line}, Col {int(col) + 1}")
         except Exception:
             pass
 
@@ -88,12 +88,11 @@ class StatusBar:
         if filepath:
             ext = os.path.splitext(filepath)[1].lower()
             lang = SUPPORTED_EXTENSIONS.get(ext, "Text")
-            self.filetype_label.configure(text=f"  {lang}  ")
+            self.filetype_label.configure(text=lang)
         else:
-            self.filetype_label.configure(text="  Text  ")
+            self.filetype_label.configure(text="Text")
 
     def update_git_branch(self, branch):
-        """Update the Git branch display."""
         if branch:
             self.git_label.configure(text=f" {branch}")
         else:

@@ -1,14 +1,15 @@
-"""Find and Replace with SVG icons."""
+"""Find and Replace — VS Code style with round buttons."""
 
 import tkinter as tk
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
 
 from src.utils.icon_manager import IconManager
+from src.utils.styles import make_round_btn, make_icon_btn
 
 
 class SearchBar:
-    """Find and Replace bar with SVG icons."""
+    """Find and Replace bar."""
 
     def __init__(self, parent, app):
         self.app = app
@@ -18,51 +19,37 @@ class SearchBar:
         self.icon_mgr = IconManager()
         self._icon_refs = []
 
-        self.frame = ttk.Frame(parent)
+        self.frame = ttk.Frame(parent, padding=(8, 4, 8, 4))
 
-        # ── Find row ──
+        # Find row
         find_row = ttk.Frame(self.frame)
-        find_row.pack(fill=X, padx=8, pady=(4, 0))
+        find_row.pack(fill=X, pady=(0, 2))
 
-        search_icon = self.icon_mgr.get("search", 16)
+        search_icon = self.icon_mgr.get("search", 14)
         self._icon_refs.append(search_icon)
 
         ttk.Label(
-            find_row,
-            text=" Find:",
-            image=search_icon,
-            compound=LEFT,
+            find_row, text=" Find:",
+            image=search_icon, compound=LEFT,
             font=("Segoe UI", 10),
         ).pack(side=LEFT)
 
-        self.find_entry = ttk.Entry(find_row, width=30)
+        self.find_entry = ttk.Entry(find_row, width=28, font=("Segoe UI", 10))
         self.find_entry.pack(side=LEFT, padx=(8, 4))
         self.find_entry.bind("<Return>", self._find_next)
         self.find_entry.bind("<KeyRelease>", self._on_find_changed)
 
-        left_icon = self.icon_mgr.get("arrow_left", 16)
-        self._icon_refs.append(left_icon)
-
-        ttk.Button(
-            find_row,
-            image=left_icon,
-            bootstyle="info-outline",
-            command=self._find_prev,
+        left_icon = self.icon_mgr.get("arrow_left", 14)
+        make_icon_btn(
+            find_row, left_icon, self._find_prev, "info", self._icon_refs,
         ).pack(side=LEFT, padx=1)
 
-        right_icon = self.icon_mgr.get("arrow_right", 16)
-        self._icon_refs.append(right_icon)
-
-        ttk.Button(
-            find_row,
-            image=right_icon,
-            bootstyle="info-outline",
-            command=self._find_next,
+        right_icon = self.icon_mgr.get("arrow_right", 14)
+        make_icon_btn(
+            find_row, right_icon, self._find_next, "info", self._icon_refs,
         ).pack(side=LEFT, padx=1)
 
-        self.match_label = ttk.Label(
-            find_row, text="", font=("Segoe UI", 9)
-        )
+        self.match_label = ttk.Label(find_row, text="", font=("Segoe UI", 9))
         self.match_label.pack(side=LEFT, padx=8)
 
         self.case_var = tk.BooleanVar(value=False)
@@ -72,47 +59,38 @@ class SearchBar:
             command=self._on_find_changed,
         ).pack(side=LEFT, padx=4)
 
-        close_icon = self.icon_mgr.get("close", 16)
-        self._icon_refs.append(close_icon)
-
-        ttk.Button(
-            find_row,
-            image=close_icon,
-            bootstyle="danger-link",
-            command=self.hide,
+        close_icon = self.icon_mgr.get("close", 14)
+        make_icon_btn(
+            find_row, close_icon, self.hide, "danger", self._icon_refs,
         ).pack(side=RIGHT)
 
-        # ── Replace row ──
+        # Replace row
         replace_row = ttk.Frame(self.frame)
-        replace_row.pack(fill=X, padx=8, pady=(2, 4))
+        replace_row.pack(fill=X)
 
-        replace_icon = self.icon_mgr.get("replace", 16)
+        replace_icon = self.icon_mgr.get("replace", 14)
         self._icon_refs.append(replace_icon)
 
         ttk.Label(
-            replace_row,
-            text=" Replace:",
-            image=replace_icon,
-            compound=LEFT,
+            replace_row, text=" Replace:",
+            image=replace_icon, compound=LEFT,
             font=("Segoe UI", 10),
         ).pack(side=LEFT)
 
-        self.replace_entry = ttk.Entry(replace_row, width=30)
+        self.replace_entry = ttk.Entry(replace_row, width=28, font=("Segoe UI", 10))
         self.replace_entry.pack(side=LEFT, padx=(8, 4))
 
-        ttk.Button(
-            replace_row, text="Replace",
-            bootstyle="warning-outline",
-            command=self._replace_one,
+        make_round_btn(
+            replace_row, "Replace", None,
+            self._replace_one, "warning",
+            self._icon_refs, "small",
         ).pack(side=LEFT, padx=2)
 
-        ttk.Button(
-            replace_row, text="All",
-            bootstyle="warning-outline",
-            command=self._replace_all,
+        make_round_btn(
+            replace_row, "All", None,
+            self._replace_all, "warning",
+            self._icon_refs, "small",
         ).pack(side=LEFT, padx=2)
-
-    # ── Visibility ──
 
     def toggle(self):
         if self.visible:
@@ -139,8 +117,6 @@ class SearchBar:
         self.frame.grid_remove()
         self.visible = False
         self._clear_highlights()
-
-    # ── Search logic ──
 
     def _on_find_changed(self, event=None):
         self._find_all()
@@ -176,9 +152,7 @@ class SearchBar:
         )
 
         count = len(self.matches)
-        self.match_label.configure(
-            text=f"{count} match{'es' if count != 1 else ''}"
-        )
+        self.match_label.configure(text=f"{count} match{'es' if count != 1 else ''}")
         self.current_match = 0 if count > 0 else -1
 
     def _find_next(self, event=None):
@@ -204,11 +178,7 @@ class SearchBar:
         editor.tag_remove("current_match", "1.0", "end")
         editor.tag_add("current_match", pos, end)
         editor.tag_configure("current_match", background="#ff6600")
-        self.match_label.configure(
-            text=f"{self.current_match + 1}/{len(self.matches)}"
-        )
-
-    # ── Replace ──
+        self.match_label.configure(text=f"{self.current_match + 1}/{len(self.matches)}")
 
     def _replace_one(self):
         editor = self._get_editor()
@@ -230,8 +200,6 @@ class SearchBar:
         count = len(self.matches)
         self._find_all()
         self.app.set_status(f"Replaced {count} occurrences")
-
-    # ── Helpers ──
 
     def _get_editor(self):
         try:

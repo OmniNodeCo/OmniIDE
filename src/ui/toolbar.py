@@ -1,11 +1,11 @@
-"""Top toolbar with properly hovering round buttons."""
+"""Top toolbar — VS Code style with round icon+text buttons."""
 
 import tkinter as tk
 import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
 
 from src.utils.icon_manager import IconManager
-from src.utils.styles import make_round_btn
+from src.utils.styles import make_round_btn, make_icon_btn
 
 
 class Toolbar:
@@ -16,46 +16,40 @@ class Toolbar:
         self.icon_mgr = IconManager()
         self._icon_refs = []
 
-        self.frame = ttk.Frame(parent, padding=(6, 4))
+        self.frame = ttk.Frame(parent, padding=(8, 4, 8, 4))
 
-        make_round_btn(
-            self.frame, "New",
-            self.icon_mgr.get("new_file", 14),
-            app.file_manager.new_file, "info",
-            self._icon_refs,
-        ).pack(side=LEFT, padx=2)
-
-        make_round_btn(
-            self.frame, "Open",
-            self.icon_mgr.get("open_file", 14),
-            app.file_manager.open_file, "info",
-            self._icon_refs,
-        ).pack(side=LEFT, padx=2)
-
-        make_round_btn(
-            self.frame, "Save",
-            self.icon_mgr.get("save", 14),
-            app.file_manager.save_file, "success",
-            self._icon_refs,
-        ).pack(side=LEFT, padx=2)
+        # File group
+        self._btn("new_file", "New", app.file_manager.new_file, "info")
+        self._btn("open_file", "Open", app.file_manager.open_file, "info")
+        self._btn("save", "Save", app.file_manager.save_file, "success")
 
         self._sep()
 
-        make_round_btn(
-            self.frame, "Find",
-            self.icon_mgr.get("search", 14),
-            app.toggle_search, "warning",
-            self._icon_refs,
-        ).pack(side=LEFT, padx=2)
+        # Edit
+        self._btn("search", "Find", app.toggle_search, "warning")
 
         self._sep()
 
-        make_round_btn(
-            self.frame, "Theme",
-            self.icon_mgr.get("theme", 14),
-            app.switch_theme, "secondary",
-            self._icon_refs,
-        ).pack(side=LEFT, padx=2)
+        # View
+        self._btn("theme", "Theme", app.switch_theme, "secondary")
+        self._btn("settings", "Settings", lambda: app.open_settings(), "secondary")
+
+        # Right-aligned
+        spacer = ttk.Frame(self.frame)
+        spacer.pack(side=LEFT, fill=X, expand=True)
+
+        # Command palette button on the right
+        self._btn("terminal", "Palette", lambda: app.toggle_command_palette(), "info", side=RIGHT)
+
+    def _btn(self, icon_name, text, command, style, side=LEFT):
+        icon = self.icon_mgr.get(icon_name, 14)
+        self._icon_refs.append(icon)
+
+        btn = make_round_btn(
+            self.frame, text, icon, command, style,
+            self._icon_refs, size="small",
+        )
+        btn.pack(side=side, padx=2)
 
     def _sep(self):
         ttk.Separator(self.frame, orient=VERTICAL).pack(

@@ -1,4 +1,4 @@
-"""Extensions panel — browse and install VS Code extensions."""
+"""Extensions panel — VS Code style browse and install."""
 
 import tkinter as tk
 import tkinter.ttk as tkttk
@@ -7,12 +7,12 @@ from ttkbootstrap.constants import *
 from tkinter import messagebox
 
 from src.utils.icon_manager import IconManager
-from src.utils.styles import make_round_btn, make_icon_btn
+from src.utils.styles import make_round_btn
 from src.core.extension_manager import ExtensionManager
 
 
 class ExtensionsPanel:
-    """Extensions browser panel for the sidebar."""
+    """Extensions browser panel."""
 
     def __init__(self, parent, app):
         self.app = app
@@ -25,17 +25,25 @@ class ExtensionsPanel:
         self._build_ui()
 
     def _build_ui(self):
-        """Build the extensions panel UI."""
-        # ── Search bar ──
-        search_frame = ttk.Frame(self.frame)
-        search_frame.pack(fill=X, padx=6, pady=(6, 4))
+        # Header
+        header = ttk.Frame(self.frame, padding=(10, 6, 10, 4))
+        header.pack(fill=X)
 
-        search_icon = self.icon_mgr.get("search", 14)
-        self._icon_refs.append(search_icon)
+        ext_icon = self.icon_mgr.get("settings", 14)
+        self._icon_refs.append(ext_icon)
 
         ttk.Label(
-            search_frame, image=search_icon,
-        ).pack(side=LEFT, padx=(0, 4))
+            header,
+            text=" EXTENSIONS",
+            image=ext_icon,
+            compound=LEFT,
+            font=("Segoe UI", 9, "bold"),
+            foreground="#a6adc8",
+        ).pack(side=LEFT)
+
+        # Search
+        search_frame = ttk.Frame(self.frame, padding=(8, 4, 8, 4))
+        search_frame.pack(fill=X)
 
         self.search_var = tk.StringVar()
         self.search_entry = ttk.Entry(
@@ -43,32 +51,33 @@ class ExtensionsPanel:
             textvariable=self.search_var,
             font=("Segoe UI", 10),
         )
-        self.search_entry.pack(side=LEFT, fill=X, expand=True)
+        self.search_entry.pack(side=LEFT, fill=X, expand=True, padx=(0, 4))
         self.search_entry.insert(0, "Search extensions...")
         self.search_entry.bind("<FocusIn>", self._clear_placeholder)
         self.search_entry.bind("<FocusOut>", self._set_placeholder)
         self.search_entry.bind("<Return>", self._on_search)
 
-        search_btn = make_round_btn(
-            search_frame,
-            text="",
-            icon=search_icon,
-            command=self._on_search,
-            style_name="info",
-            icon_refs=self._icon_refs,
-        )
-        search_btn.pack(side=RIGHT, padx=(4, 0))
+        search_icon = self.icon_mgr.get("search", 14)
+        self._icon_refs.append(search_icon)
 
-        # ── Loading label ──
+        search_btn = make_round_btn(
+            search_frame, "", search_icon,
+            self._on_search, "info",
+            self._icon_refs, size="small",
+        )
+        search_btn.pack(side=RIGHT)
+
+        # Loading label
         self.loading_label = ttk.Label(
             self.frame, text="",
             font=("Segoe UI", 9),
+            padding=(10, 2),
         )
-        self.loading_label.pack(fill=X, padx=8)
+        self.loading_label.pack(fill=X)
 
-        # ── Tab selector: Marketplace | Installed ──
-        tab_frame = ttk.Frame(self.frame)
-        tab_frame.pack(fill=X, padx=6, pady=(2, 4))
+        # Tabs: Marketplace | Installed
+        tab_frame = ttk.Frame(self.frame, padding=(8, 2, 8, 4))
+        tab_frame.pack(fill=X)
 
         self.tab_var = tk.StringVar(value="marketplace")
 
@@ -77,29 +86,27 @@ class ExtensionsPanel:
             variable=self.tab_var, value="marketplace",
             bootstyle="info-outline-toolbutton",
             command=self._on_tab_change,
-        ).pack(side=LEFT, padx=(0, 2), fill=X, expand=True)
+        ).pack(side=LEFT, fill=X, expand=True, padx=(0, 2))
 
         ttk.Radiobutton(
             tab_frame, text="Installed",
             variable=self.tab_var, value="installed",
             bootstyle="success-outline-toolbutton",
             command=self._on_tab_change,
-        ).pack(side=LEFT, padx=(2, 0), fill=X, expand=True)
+        ).pack(side=LEFT, fill=X, expand=True, padx=(2, 0))
 
-        # ── Results area (scrollable) ──
+        # Results (scrollable)
         results_container = ttk.Frame(self.frame)
         results_container.pack(fill=BOTH, expand=True, padx=2)
 
         self.results_canvas = tk.Canvas(
             results_container,
-            highlightthickness=0,
-            bd=0,
+            highlightthickness=0, bd=0,
             bg=self.app.colors["sidebar_bg"],
         )
 
         self.results_scrollbar = tkttk.Scrollbar(
-            results_container,
-            orient=tk.VERTICAL,
+            results_container, orient=tk.VERTICAL,
             command=self.results_canvas.yview,
         )
 
@@ -119,11 +126,9 @@ class ExtensionsPanel:
         self.results_canvas.pack(side=LEFT, fill=BOTH, expand=True)
         self.results_scrollbar.pack(side=RIGHT, fill=tk.Y)
 
-        # Bind mouse wheel
         self.results_canvas.bind("<Enter>", self._bind_mousewheel)
         self.results_canvas.bind("<Leave>", self._unbind_mousewheel)
 
-        # Make results frame fill canvas width
         self.results_canvas.bind(
             "<Configure>",
             lambda e: self.results_canvas.itemconfig(
@@ -131,7 +136,6 @@ class ExtensionsPanel:
             ),
         )
 
-        # Show installed by default
         self._show_installed()
 
     def _clear_placeholder(self, event=None):
@@ -158,9 +162,7 @@ class ExtensionsPanel:
         elif event.num == 5:
             self.results_canvas.yview_scroll(1, "units")
         else:
-            self.results_canvas.yview_scroll(
-                int(-1 * (event.delta / 120)), "units"
-            )
+            self.results_canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
 
     def _on_tab_change(self):
         if self.tab_var.get() == "installed":
@@ -182,7 +184,6 @@ class ExtensionsPanel:
         self.ext_manager.search(query, self._on_search_results)
 
     def _on_search_results(self, results, error):
-        """Handle search results on main thread."""
         self._clear_results()
 
         if error:
@@ -193,14 +194,13 @@ class ExtensionsPanel:
             self.loading_label.configure(text="No extensions found.")
             return
 
-        self.loading_label.configure(text=f"{len(results)} extensions found")
+        self.loading_label.configure(text=f"{len(results)} found")
         self.app.set_status(f"Found {len(results)} extensions")
 
         for ext_info in results:
-            self._add_extension_card(ext_info, mode="marketplace")
+            self._add_card(ext_info, mode="marketplace")
 
     def _show_installed(self):
-        """Show installed extensions."""
         self._clear_results()
         installed = self.ext_manager.get_installed()
 
@@ -211,17 +211,16 @@ class ExtensionsPanel:
         self.loading_label.configure(text=f"{len(installed)} installed")
 
         for ext_info in installed:
-            self._add_extension_card(ext_info, mode="installed")
+            self._add_card(ext_info, mode="installed")
 
-    def _add_extension_card(self, ext_info, mode="marketplace"):
-        """Add an extension card to the results."""
-        card = ttk.Frame(
-            self.results_frame,
-            padding=(8, 6),
-        )
-        card.pack(fill=X, padx=4, pady=2)
+    def _add_card(self, ext_info, mode="marketplace"):
+        """Add a VS Code style extension card."""
+        c = self.app.colors
 
-        # Top row: name + version
+        card = ttk.Frame(self.results_frame, padding=(10, 8))
+        card.pack(fill=X, padx=2, pady=1)
+
+        # Top: name + version
         top = ttk.Frame(card)
         top.pack(fill=X)
 
@@ -231,13 +230,13 @@ class ExtensionsPanel:
         ttk.Label(
             top, text=name,
             font=("Segoe UI", 10, "bold"),
-            wraplength=200,
+            wraplength=210,
         ).pack(side=LEFT, anchor="w")
 
         ttk.Label(
             top, text=f"v{version}",
             font=("Segoe UI", 8),
-            foreground=self.app.colors.get("fg_secondary", "#888"),
+            foreground=c.get("fg_secondary", "#888"),
         ).pack(side=RIGHT)
 
         # Publisher
@@ -246,45 +245,45 @@ class ExtensionsPanel:
             ttk.Label(
                 card, text=publisher,
                 font=("Segoe UI", 8),
-                foreground=self.app.colors.get("accent", "#89b4fa"),
+                foreground=c.get("accent", "#89b4fa"),
             ).pack(anchor="w")
 
         # Description
         desc = ext_info.get("description", "")
         if desc:
             ttk.Label(
-                card, text=desc[:120] + ("..." if len(desc) > 120 else ""),
+                card, text=desc[:100] + ("..." if len(desc) > 100 else ""),
                 font=("Segoe UI", 9),
                 wraplength=220,
+                foreground=c.get("fg_secondary", "#a6adc8"),
             ).pack(anchor="w", pady=(2, 0))
 
-        # Stats row
+        # Stats
         if mode == "marketplace":
-            stats_frame = ttk.Frame(card)
-            stats_frame.pack(fill=X, pady=(4, 0))
+            stats = ttk.Frame(card)
+            stats.pack(fill=X, pady=(4, 0))
 
             installs = ext_info.get("installs", 0)
             rating = ext_info.get("rating", 0)
 
             ttk.Label(
-                stats_frame,
+                stats,
                 text=f"Downloads: {ExtensionManager.format_installs(installs)}",
                 font=("Segoe UI", 8),
-                foreground=self.app.colors.get("fg_secondary", "#888"),
+                foreground=c.get("fg_secondary", "#888"),
             ).pack(side=LEFT)
 
             if rating > 0:
-                stars = "*" * int(rating) + "." * (5 - int(rating))
                 ttk.Label(
-                    stats_frame,
-                    text=f"  [{stars}] {rating}",
-                    font=("Consolas", 8),
-                    foreground=self.app.colors.get("warning", "#fab387"),
+                    stats,
+                    text=f"  Rating: {rating}",
+                    font=("Segoe UI", 8),
+                    foreground=c.get("warning", "#fab387"),
                 ).pack(side=LEFT, padx=(8, 0))
 
         # Action button
         btn_frame = ttk.Frame(card)
-        btn_frame.pack(fill=X, pady=(4, 0))
+        btn_frame.pack(fill=X, pady=(6, 0))
 
         if mode == "marketplace":
             is_installed = ext_info.get("installed", False)
@@ -292,37 +291,27 @@ class ExtensionsPanel:
                 ttk.Label(
                     btn_frame, text="Installed",
                     font=("Segoe UI", 9, "bold"),
-                    foreground=self.app.colors.get("success", "#a6e3a1"),
+                    foreground=c.get("success", "#a6e3a1"),
                 ).pack(side=LEFT)
             else:
-                install_btn = make_round_btn(
-                    btn_frame,
-                    text="Install",
-                    icon=self.icon_mgr.get("success", 12),
-                    command=lambda ei=ext_info: self._install(ei),
-                    style_name="success",
-                    icon_refs=self._icon_refs,
-                )
-                install_btn.pack(side=LEFT)
-
+                make_round_btn(
+                    btn_frame, "Install",
+                    self.icon_mgr.get("success", 12),
+                    lambda ei=ext_info: self._install(ei),
+                    "success", self._icon_refs, "small",
+                ).pack(side=LEFT)
         elif mode == "installed":
-            uninstall_btn = make_round_btn(
-                btn_frame,
-                text="Uninstall",
-                icon=self.icon_mgr.get("close", 12),
-                command=lambda ei=ext_info: self._uninstall(ei),
-                style_name="danger",
-                icon_refs=self._icon_refs,
-            )
-            uninstall_btn.pack(side=LEFT)
+            make_round_btn(
+                btn_frame, "Uninstall",
+                self.icon_mgr.get("close", 12),
+                lambda ei=ext_info: self._uninstall(ei),
+                "danger", self._icon_refs, "small",
+            ).pack(side=LEFT)
 
-        # Separator
         ttk.Separator(self.results_frame).pack(fill=X, padx=8, pady=1)
-
         self.result_widgets.append(card)
 
     def _install(self, ext_info):
-        """Install an extension."""
         name = ext_info.get("name", "extension")
         self.loading_label.configure(text=f"Installing {name}...")
         self.app.set_status(f"Installing {name}...")
@@ -332,7 +321,6 @@ class ExtensionsPanel:
             self.app.set_status(message)
             if success:
                 messagebox.showinfo("Installed", message)
-                # Refresh the results to show updated install status
                 query = self.search_var.get().strip()
                 if query and query != "Search extensions...":
                     self._on_search()
@@ -342,15 +330,10 @@ class ExtensionsPanel:
         self.ext_manager.install_extension(ext_info, _on_done)
 
     def _uninstall(self, ext_info):
-        """Uninstall an extension."""
         ext_id = ext_info.get("id", "")
         name = ext_info.get("name", ext_id)
 
-        confirm = messagebox.askyesno(
-            "Uninstall",
-            f"Uninstall {name}?",
-        )
-        if not confirm:
+        if not messagebox.askyesno("Uninstall", f"Uninstall {name}?"):
             return
 
         ok, msg = self.ext_manager.uninstall_extension(ext_id)
@@ -361,7 +344,6 @@ class ExtensionsPanel:
             messagebox.showerror("Uninstall Failed", msg)
 
     def _clear_results(self):
-        """Clear all result widgets."""
         for widget in self.results_frame.winfo_children():
             widget.destroy()
         self.result_widgets.clear()
