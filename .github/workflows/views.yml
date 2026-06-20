@@ -1,32 +1,29 @@
-name: Track Views
+name: Views
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  update-readme-counter:
-    name: Update View Badge
+  check-badge:
+    name: "Verify View Counter"
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Verify badge exists in README
+      - name: Check badge in README
         run: |
           if grep -q "komarev.com/ghpvc" README.md; then
             echo "View counter badge found in README.md"
           else
-            echo "Warning: No komarev badge found in README.md"
-            echo "Add this to your README.md:"
+            echo "Warning: No komarev badge found"
+            echo "Add this to README.md:"
             echo '![Views](https://komarev.com/ghpvc/?username=OmniNodeCo-OmniIDE&label=Views&color=89b4fa&style=for-the-badge&abbreviated=true)'
           fi
 
       - name: Done
-        run: echo "View counter is handled by komarev.com badge in README — no action needed"
+        run: echo "View counter is handled by komarev.com badge — no action needed"

@@ -1,27 +1,21 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - "v*.*.*"
   workflow_dispatch:
     inputs:
       version:
-        description: "Version tag (e.g. v1.0.3)"
+        description: "Version tag (e.g. v1.0.4)"
         required: true
-        default: "v1.0.3"
+        default: "v1.0.4"
 
 permissions:
   contents: write
 
 env:
-  APP_VERSION: ${{ github.ref_name || github.event.inputs.version }}
+  APP_VERSION: ${{ github.event.inputs.version }}
 
 jobs:
 
-  # ─────────────────────────────────────────
-  # WINDOWS
-  # ─────────────────────────────────────────
   build-windows:
     name: "Windows"
     runs-on: windows-latest
@@ -47,7 +41,6 @@ jobs:
         run: |
           import os
           from PIL import Image, ImageDraw
-
           os.makedirs("assets", exist_ok=True)
           sizes = [16, 32, 48, 64, 128, 256]
           images = []
@@ -65,13 +58,8 @@ jobs:
               d = max(2, size // 10)
               draw.ellipse([c-d, c-d, c+d, c+d], fill=(245, 194, 231, 255))
               images.append(img)
-          images[0].save(
-              "assets/icon.ico", format="ICO",
-              sizes=[(s, s) for s in sizes],
-              append_images=images[1:],
-          )
+          images[0].save("assets/icon.ico", format="ICO", sizes=[(s,s) for s in sizes], append_images=images[1:])
           images[-1].save("assets/icon.png", format="PNG")
-          print("Icons generated")
 
       - name: Patch spec with icon
         shell: python
@@ -79,13 +67,9 @@ jobs:
           with open("OmniIDE.spec", "r") as f:
               c = f.read()
           if "icon=" not in c:
-              c = c.replace(
-                  "entitlements_file=None,",
-                  "entitlements_file=None,\n    icon='assets/icon.ico',",
-              )
+              c = c.replace("entitlements_file=None,", "entitlements_file=None,\n    icon='assets/icon.ico',")
               with open("OmniIDE.spec", "w") as f:
                   f.write(c)
-          print("Spec patched")
 
       - name: Build
         run: pyinstaller OmniIDE.spec
@@ -107,9 +91,6 @@ jobs:
           path: dist/OmniIDE.exe
           retention-days: 5
 
-  # ─────────────────────────────────────────
-  # MACOS
-  # ─────────────────────────────────────────
   build-macos:
     name: "macOS"
     runs-on: macos-latest
@@ -136,7 +117,6 @@ jobs:
         run: |
           import os
           from PIL import Image, ImageDraw
-
           os.makedirs("assets", exist_ok=True)
           sizes = [16, 32, 48, 64, 128, 256, 512]
           images = []
@@ -155,13 +135,9 @@ jobs:
               draw.ellipse([c-d, c-d, c+d, c+d], fill=(245, 194, 231, 255))
               images.append(img)
           ico_imgs = [img for img in images if img.size[0] <= 256]
-          ico_imgs[0].save(
-              "assets/icon.ico", format="ICO",
-              sizes=[(img.size[0], img.size[0]) for img in ico_imgs],
-              append_images=ico_imgs[1:],
-          )
+          ico_imgs[0].save("assets/icon.ico", format="ICO",
+              sizes=[(img.size[0], img.size[0]) for img in ico_imgs], append_images=ico_imgs[1:])
           images[-1].save("assets/icon.png", format="PNG")
-          print("Icons generated")
 
       - name: Build
         run: pyinstaller OmniIDE.spec
@@ -169,12 +145,8 @@ jobs:
       - name: Package
         run: |
           cd dist
-          if [ -d "OmniIDE.app" ]; then
-            zip -r OmniIDE-macOS.zip OmniIDE.app
-          else
-            chmod +x OmniIDE
-            zip -r OmniIDE-macOS.zip OmniIDE
-          fi
+          if [ -d "OmniIDE.app" ]; then zip -r OmniIDE-macOS.zip OmniIDE.app
+          else chmod +x OmniIDE && zip -r OmniIDE-macOS.zip OmniIDE; fi
           ls -lh OmniIDE-macOS.zip
 
       - name: Upload
@@ -184,9 +156,6 @@ jobs:
           path: dist/OmniIDE-macOS.zip
           retention-days: 5
 
-  # ─────────────────────────────────────────
-  # LINUX
-  # ─────────────────────────────────────────
   build-linux:
     name: "Linux"
     runs-on: ubuntu-22.04
@@ -220,7 +189,6 @@ jobs:
         run: |
           import os
           from PIL import Image, ImageDraw
-
           os.makedirs("assets", exist_ok=True)
           sizes = [16, 32, 48, 64, 128, 256]
           images = []
@@ -238,13 +206,8 @@ jobs:
               d = max(2, size // 10)
               draw.ellipse([c-d, c-d, c+d, c+d], fill=(245, 194, 231, 255))
               images.append(img)
-          images[0].save(
-              "assets/icon.ico", format="ICO",
-              sizes=[(s, s) for s in sizes],
-              append_images=images[1:],
-          )
+          images[0].save("assets/icon.ico", format="ICO", sizes=[(s,s) for s in sizes], append_images=images[1:])
           images[-1].save("assets/icon.png", format="PNG")
-          print("Icons generated")
 
       - name: Build
         run: pyinstaller OmniIDE.spec
@@ -263,9 +226,6 @@ jobs:
           path: dist/OmniIDE-Linux.tar.gz
           retention-days: 5
 
-  # ─────────────────────────────────────────
-  # PUBLISH RELEASE
-  # ─────────────────────────────────────────
   release:
     name: "Publish Release"
     runs-on: ubuntu-latest
@@ -296,56 +256,21 @@ jobs:
       - name: List files
         run: find release/ -type f -exec ls -lh {} \;
 
-      - name: Read version from config
-        id: version
+      - name: Create tag
         run: |
-          VER=$(python3 -c "
-          import re
-          with open('src/config.py') as f:
-              content = f.read()
-          match = re.search(r'APP_VERSION\s*=\s*[\"''](.+?)[\"'']', content)
-          print(match.group(1) if match else 'unknown')
-          ")
-          echo "version=$VER" >> $GITHUB_OUTPUT
-          echo "Detected version: $VER"
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git tag -f ${{ env.APP_VERSION }}
+          git push origin ${{ env.APP_VERSION }} --force
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Generate changelog
         run: |
           cat << 'CHANGES' > changelog.md
-          ## What's New in ${{ env.APP_VERSION }}
-
-          ### Features
-          - **Settings GUI** (`Ctrl+,`) — full visual settings editor
-            - Appearance: theme, font, font size, cursor blink, whitespace
-            - Editor: tab size, word wrap, auto indent, auto save, line numbers
-            - Terminal: default shell selection
-            - Updates: auto-check toggle + manual check button
-            - Searchable, live-apply, reset to defaults
-          - **Auto-update checker** — queries GitHub Releases on startup
-            - Shows current vs latest version comparison
-            - Full release notes with scrollable view
-            - Platform-specific download button with file size
-            - Configurable: can disable in Settings
-          - **Command Palette** (`Ctrl+Shift+P`) — 50+ fuzzy-searchable commands
-          - **Go to Line** (`Ctrl+G`), **Toggle Comment** (`Ctrl+/`)
-          - **Line operations**: duplicate, delete, move up/down
-          - **VS Code Extension Marketplace** — search, install, uninstall
-          - **Git Integration** — clone, init, commit, push, pull, diff, log, branches
-          - **Real Interactive Terminal** — Bash, PowerShell, CMD, Zsh, Fish
-          - **Shell Selector** — dropdown per OS
-          - **SVG Icon System** — custom rendered, no emoji
-          - **Animated Splash Screen** — with progress bar
-          - **Round Modern Buttons** — proper hover/leave behavior
-
-          ### Bug Fixes
-          - Fixed button hover staying highlighted after mouse leave
-          - Fixed deferred menu bindings for command palette
-          - Fixed PanedWindow crash (tkinter.ttk)
-          - Fixed search bar crash during startup
-          - Fixed icon missing in CI builds
+          ## OmniIDE ${{ env.APP_VERSION }}
 
           ### Downloads
-
           | Platform | File |
           |----------|------|
           | Windows | `OmniIDE.exe` |
@@ -353,20 +278,16 @@ jobs:
           | Linux | `OmniIDE-Linux.tar.gz` |
 
           ### Install
-
-          **Windows** — Download `OmniIDE.exe` and run. No install needed.
+          **Windows** — Download and double-click. No install needed.
 
           **macOS**
           ```bash
-          unzip OmniIDE-macOS.zip
-          open OmniIDE.app
+          unzip OmniIDE-macOS.zip && open OmniIDE.app
           ```
 
           **Linux**
           ```bash
-          tar -xzvf OmniIDE-Linux.tar.gz
-          chmod +x OmniIDE
-          ./OmniIDE
+          tar -xzvf OmniIDE-Linux.tar.gz && chmod +x OmniIDE && ./OmniIDE
           ```
 
           ---
@@ -392,17 +313,13 @@ jobs:
       - name: Summary
         run: |
           echo "## Release Published" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Version:** ${{ env.APP_VERSION }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Artifacts" >> $GITHUB_STEP_SUMMARY
-          echo "| Platform | File | Size |" >> $GITHUB_STEP_SUMMARY
-          echo "|----------|------|------|" >> $GITHUB_STEP_SUMMARY
-
-          WIN_SIZE=$(du -h release/windows/OmniIDE.exe 2>/dev/null | cut -f1 || echo "N/A")
-          MAC_SIZE=$(du -h release/macos/OmniIDE-macOS.zip 2>/dev/null | cut -f1 || echo "N/A")
-          LIN_SIZE=$(du -h release/linux/OmniIDE-Linux.tar.gz 2>/dev/null | cut -f1 || echo "N/A")
-
-          echo "| Windows | OmniIDE.exe | $WIN_SIZE |" >> $GITHUB_STEP_SUMMARY
-          echo "| macOS | OmniIDE-macOS.zip | $MAC_SIZE |" >> $GITHUB_STEP_SUMMARY
-          echo "| Linux | OmniIDE-Linux.tar.gz | $LIN_SIZE |" >> $GITHUB_STEP_SUMMARY
+          echo "| Platform | Size |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|------|" >> $GITHUB_STEP_SUMMARY
+          WIN=$(du -h release/windows/OmniIDE.exe 2>/dev/null | cut -f1 || echo "N/A")
+          MAC=$(du -h release/macos/OmniIDE-macOS.zip 2>/dev/null | cut -f1 || echo "N/A")
+          LIN=$(du -h release/linux/OmniIDE-Linux.tar.gz 2>/dev/null | cut -f1 || echo "N/A")
+          echo "| Windows | $WIN |" >> $GITHUB_STEP_SUMMARY
+          echo "| macOS | $MAC |" >> $GITHUB_STEP_SUMMARY
+          echo "| Linux | $LIN |" >> $GITHUB_STEP_SUMMARY

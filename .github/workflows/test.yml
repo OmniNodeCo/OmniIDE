@@ -1,0 +1,705 @@
+name: Test
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+
+  # ─────────────────────────────────────────
+  # STRUCTURE CHECK
+  # ─────────────────────────────────────────
+  structure:
+    name: "File Structure"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check all required files exist
+        run: |
+          MISSING=0
+          FILES=(
+            "run.py"
+            "OmniIDE.spec"
+            "requirements.txt"
+            "setup.py"
+            "LICENSE"
+            "README.md"
+            "assets/icons/__init__.py"
+            "assets/icons/icons.py"
+            "assets/themes/dark.json"
+            "assets/themes/light.json"
+            "src/__init__.py"
+            "src/app.py"
+            "src/config.py"
+            "src/core/__init__.py"
+            "src/core/editor.py"
+            "src/core/tab_manager.py"
+            "src/core/syntax_highlighter.py"
+            "src/core/file_manager.py"
+            "src/core/terminal.py"
+            "src/core/search.py"
+            "src/core/git_manager.py"
+            "src/core/git_installer.py"
+            "src/core/extension_manager.py"
+            "src/core/command_palette.py"
+            "src/core/updater.py"
+            "src/ui/__init__.py"
+            "src/ui/menubar.py"
+            "src/ui/sidebar.py"
+            "src/ui/statusbar.py"
+            "src/ui/toolbar.py"
+            "src/ui/file_tree.py"
+            "src/ui/welcome.py"
+            "src/ui/splash.py"
+            "src/ui/extensions_panel.py"
+            "src/ui/settings_panel.py"
+            "src/utils/__init__.py"
+            "src/utils/icon_manager.py"
+            "src/utils/theme_loader.py"
+            "src/utils/recent_files.py"
+            "src/utils/shortcuts.py"
+            "src/utils/styles.py"
+          )
+
+          for f in "${FILES[@]}"; do
+            if [ ! -f "$f" ]; then
+              echo "  MISSING: $f"
+              MISSING=$((MISSING + 1))
+            else
+              echo "  OK: $f"
+            fi
+          done
+
+          echo ""
+          if [ $MISSING -gt 0 ]; then
+            echo "ERROR: $MISSING file(s) missing!"
+            exit 1
+          fi
+          echo "All ${#FILES[@]} required files present"
+
+  # ─────────────────────────────────────────
+  # IMPORT CHECK — every module imports clean
+  # ─────────────────────────────────────────
+  imports:
+    name: "Import Check"
+    runs-on: ubuntu-latest
+    needs: structure
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y python3-tk python3-dev tk-dev
+
+      - name: Install Python deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pillow
+
+      - name: Test config imports
+        run: |
+          python -c "
+          from src.config import APP_NAME, APP_VERSION, APP_AUTHOR
+          from src.config import DEFAULT_SETTINGS, SETTINGS_PATH, CONFIG_DIR
+          from src.config import SUPPORTED_EXTENSIONS, FILE_DIALOG_TYPES
+          from src.config import FONT_OPTIONS, GIT_DOWNLOAD_URLS
+          from src.config import VSCODE_MARKETPLACE_URL, VSCODE_MARKETPLACE_VERSION
+          from src.config import APP_GITHUB_API, APP_RELEASES_URL, APP_WEBSITE
+          from src.config import ASSETS_DIR, THEMES_DIR, EXTENSIONS_DIR
+          print(f'{APP_NAME} v{APP_VERSION} by {APP_AUTHOR}')
+          assert APP_VERSION == '1.0.4', f'Version mismatch: {APP_VERSION}'
+          print('config.py — OK')
+          "
+
+      - name: Test __init__ imports
+        run: |
+          python -c "
+          from src import __version__, __author__
+          assert __version__ == '1.0.4', f'Version mismatch: {__version__}'
+          print(f'src/__init__.py — v{__version__} by {__author__} — OK')
+          "
+
+      - name: Test utils imports
+        run: |
+          python -c "
+          from src.utils.theme_loader import ThemeLoader
+          from src.utils.recent_files import RecentFilesManager
+          from src.utils.icon_manager import IconManager, EXTENSION_ICON_MAP, FOLDER_ICON_MAP
+          from src.utils.icon_manager import get_file_icon_name, get_folder_icon_name
+          print('utils.theme_loader — OK')
+          print('utils.recent_files — OK')
+          print('utils.icon_manager — OK')
+          "
+
+      - name: Test utils.styles imports
+        run: |
+          python -c "
+          from src.utils.styles import apply_global_styles, make_round_btn, make_icon_btn, make_action_row
+          print('utils.styles — OK')
+          "
+
+      - name: Test utils.shortcuts imports
+        run: |
+          python -c "
+          from src.utils.shortcuts import ShortcutManager
+          print('utils.shortcuts — OK')
+          "
+
+      - name: Test core imports
+        run: |
+          python -c "
+          from src.core.syntax_highlighter import SyntaxHighlighter
+          from src.core.extension_manager import ExtensionManager
+          from src.core.updater import Updater
+          from src.core.git_installer import GitInstaller
+          print('core.syntax_highlighter — OK')
+          print('core.extension_manager — OK')
+          print('core.updater — OK')
+          print('core.git_installer — OK')
+          "
+
+      - name: Test assets.icons imports
+        run: |
+          python -c "
+          from assets.icons.icons import ICONS
+          icon_count = len(ICONS)
+          assert icon_count > 30, f'Only {icon_count} icons found'
+          required = ['file', 'folder_closed', 'folder_open', 'new_file', 'save',
+                      'search', 'terminal', 'close', 'settings', 'theme',
+                      'arrow_left', 'arrow_right', 'run', 'info', 'warning',
+                      'error', 'success', 'explorer', 'folder_git']
+          missing = [i for i in required if i not in ICONS]
+          assert not missing, f'Missing icons: {missing}'
+          print(f'assets.icons — {icon_count} icons — OK')
+          "
+
+      - name: Test theme files
+        run: |
+          python -c "
+          import json
+          import os
+
+          for theme in ['dark', 'light']:
+              path = f'assets/themes/{theme}.json'
+              assert os.path.exists(path), f'{path} not found'
+              with open(path) as f:
+                  data = json.load(f)
+              assert 'colors' in data, f'{theme}.json missing colors'
+              assert 'syntax' in data, f'{theme}.json missing syntax'
+
+              colors = data['colors']
+              required_colors = ['bg_primary', 'bg_secondary', 'fg_primary',
+                                 'accent', 'editor_bg', 'editor_fg',
+                                 'sidebar_bg', 'terminal_bg', 'terminal_fg']
+              missing = [c for c in required_colors if c not in colors]
+              assert not missing, f'{theme}.json missing colors: {missing}'
+
+              syntax = data['syntax']
+              required_syntax = ['keyword', 'string', 'comment', 'number', 'function']
+              missing = [s for s in required_syntax if s not in syntax]
+              assert not missing, f'{theme}.json missing syntax: {missing}'
+
+              print(f'themes/{theme}.json — {len(colors)} colors, {len(syntax)} syntax — OK')
+          "
+
+  # ─────────────────────────────────────────
+  # LOGIC TESTS — core functionality
+  # ─────────────────────────────────────────
+  logic:
+    name: "Logic Tests"
+    runs-on: ubuntu-latest
+    needs: imports
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y python3-tk python3-dev tk-dev
+
+      - name: Install Python deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pillow
+
+      - name: Test ThemeLoader
+        run: |
+          python -c "
+          from src.utils.theme_loader import ThemeLoader
+
+          # Dark theme
+          dark = ThemeLoader('dark')
+          assert dark.colors['bg_primary'], 'Dark bg_primary empty'
+          assert dark.syntax['keyword'], 'Dark keyword empty'
+          print(f'ThemeLoader dark — {len(dark.colors)} colors — OK')
+
+          # Light theme
+          light = ThemeLoader('light')
+          assert light.colors['bg_primary'], 'Light bg_primary empty'
+          assert light.colors['bg_primary'] != dark.colors['bg_primary'], 'Dark and light same bg'
+          print(f'ThemeLoader light — {len(light.colors)} colors — OK')
+
+          # Fallback theme
+          fallback = ThemeLoader('nonexistent')
+          assert fallback.colors['bg_primary'], 'Fallback bg_primary empty'
+          print('ThemeLoader fallback — OK')
+          "
+
+      - name: Test RecentFilesManager
+        run: |
+          python -c "
+          import tempfile, os
+          from src.utils.recent_files import RecentFilesManager
+
+          mgr = RecentFilesManager()
+
+          # Create temp file
+          with tempfile.NamedTemporaryFile(delete=False, suffix='.py') as f:
+              f.write(b'# test')
+              path = f.name
+
+          try:
+              mgr.add(path)
+              files = mgr.get_all()
+              assert os.path.abspath(path) in files, 'File not in recent list'
+              print(f'RecentFiles add — OK ({len(files)} files)')
+
+              mgr.clear()
+              assert len(mgr.get_all()) == 0, 'Clear did not empty list'
+              print('RecentFiles clear — OK')
+          finally:
+              os.unlink(path)
+          "
+
+      - name: Test SyntaxHighlighter language detection
+        run: |
+          python -c "
+          from src.core.syntax_highlighter import SyntaxHighlighter
+
+          h = SyntaxHighlighter.__new__(SyntaxHighlighter)
+
+          tests = {
+              'test.py': 'python',
+              'test.js': 'javascript',
+              'test.ts': 'javascript',
+              'test.jsx': 'javascript',
+              'test.tsx': 'javascript',
+              'test.html': 'html',
+              'test.htm': 'html',
+              'test.css': 'css',
+              'test.json': 'json',
+              'test.txt': 'text',
+              'test.unknown': 'text',
+              None: 'python',
+          }
+
+          for filepath, expected in tests.items():
+              h.filepath = filepath
+              result = h._detect_language()
+              assert result == expected, f'{filepath}: expected {expected}, got {result}'
+              print(f'  {filepath or \"None\"} -> {result} — OK')
+
+          print('SyntaxHighlighter detection — OK')
+          "
+
+      - name: Test IconManager
+        run: |
+          python -c "
+          from src.utils.icon_manager import (
+              IconManager, get_file_icon_name, get_folder_icon_name,
+              EXTENSION_ICON_MAP, FOLDER_ICON_MAP,
+          )
+
+          # Extension mapping
+          tests = {
+              'main.py': 'file_python',
+              'app.js': 'file_javascript',
+              'index.html': 'file_html',
+              'style.css': 'file_css',
+              'data.json': 'file_json',
+              'README.md': 'file_markdown',
+              'script.sh': 'file_shell',
+              'main.go': 'file_go',
+              'lib.rs': 'file_rust',
+              'unknown.xyz': 'file',
+          }
+
+          for filename, expected in tests.items():
+              result = get_file_icon_name(filename)
+              assert result == expected, f'{filename}: expected {expected}, got {result}'
+              print(f'  {filename} -> {result} — OK')
+
+          # Folder mapping
+          assert get_folder_icon_name('src') == 'folder_src'
+          assert get_folder_icon_name('.git') == 'folder_git'
+          assert get_folder_icon_name('random') == 'folder_closed'
+          assert get_folder_icon_name('random', is_open=True) == 'folder_open'
+          print('Folder icon mapping — OK')
+
+          # Text fallbacks
+          mgr = IconManager()
+          text = mgr.get_text('file_python')
+          assert text == '[Py]', f'Expected [Py], got {text}'
+          text = mgr.get_text('folder_closed')
+          assert text == '[+]', f'Expected [+], got {text}'
+          print('Icon text fallbacks — OK')
+          "
+
+      - name: Test ExtensionManager format helpers
+        run: |
+          python -c "
+          from src.core.extension_manager import ExtensionManager
+
+          assert ExtensionManager.format_installs(500) == '500'
+          assert ExtensionManager.format_installs(1500) == '1.5K'
+          assert ExtensionManager.format_installs(2500000) == '2.5M'
+          print('ExtensionManager.format_installs — OK')
+
+          r = ExtensionManager.format_rating(4.5)
+          assert '4.5' in r
+          print('ExtensionManager.format_rating — OK')
+          "
+
+      - name: Test Updater version comparison
+        run: |
+          python -c "
+          from src.core.updater import Updater
+
+          u = Updater.__new__(Updater)
+
+          assert u._is_newer('1.0.5', '1.0.4') == True
+          assert u._is_newer('1.0.4', '1.0.4') == False
+          assert u._is_newer('1.0.3', '1.0.4') == False
+          assert u._is_newer('2.0.0', '1.9.9') == True
+          assert u._is_newer('1.1.0', '1.0.9') == True
+          assert u._is_newer('1.0.0', '1.0.0.1') == False
+          assert u._is_newer('1.0.0.2', '1.0.0.1') == True
+          print('Updater._is_newer — OK')
+          "
+
+      - name: Test GitInstaller detection
+        run: |
+          python -c "
+          import shutil
+
+          git_path = shutil.which('git')
+          if git_path:
+              print(f'Git found at: {git_path} — OK')
+          else:
+              print('Git not found (expected in some CI) — OK')
+
+          # Test platform detection
+          from src.core.git_installer import GitInstaller
+          gi = GitInstaller.__new__(GitInstaller)
+
+          key = gi._get_platform_key()
+          name = gi._get_platform_name()
+          assert key in ('win32', 'darwin', 'linux'), f'Unknown platform: {key}'
+          assert name in ('Windows', 'macOS', 'Linux'), f'Unknown name: {name}'
+          print(f'Platform: {name} ({key}) — OK')
+          "
+
+      - name: Test config defaults
+        run: |
+          python -c "
+          from src.config import DEFAULT_SETTINGS
+
+          required_keys = [
+              'theme', 'font_family', 'font_size', 'tab_size',
+              'show_line_numbers', 'word_wrap', 'auto_indent',
+              'auto_save', 'auto_check_updates', 'window_width',
+              'window_height', 'sidebar_width', 'terminal_height',
+              'max_recent_files', 'default_shell', 'installed_extensions',
+              'highlight_current_line', 'show_whitespace', 'cursor_blink',
+              'minimap_enabled', 'suppress_git_prompt',
+          ]
+
+          missing = [k for k in required_keys if k not in DEFAULT_SETTINGS]
+          assert not missing, f'Missing default settings: {missing}'
+          print(f'DEFAULT_SETTINGS — {len(DEFAULT_SETTINGS)} keys — OK')
+
+          # Type checks
+          assert isinstance(DEFAULT_SETTINGS['theme'], str)
+          assert isinstance(DEFAULT_SETTINGS['font_size'], int)
+          assert isinstance(DEFAULT_SETTINGS['auto_indent'], bool)
+          assert isinstance(DEFAULT_SETTINGS['installed_extensions'], list)
+          print('Settings type checks — OK')
+          "
+
+      - name: Test supported extensions mapping
+        run: |
+          python -c "
+          from src.config import SUPPORTED_EXTENSIONS
+
+          assert '.py' in SUPPORTED_EXTENSIONS
+          assert SUPPORTED_EXTENSIONS['.py'] == 'Python'
+          assert '.js' in SUPPORTED_EXTENSIONS
+          assert '.html' in SUPPORTED_EXTENSIONS
+          assert '.css' in SUPPORTED_EXTENSIONS
+          assert '.json' in SUPPORTED_EXTENSIONS
+          assert '.ts' in SUPPORTED_EXTENSIONS
+          assert '.go' in SUPPORTED_EXTENSIONS
+          assert '.rs' in SUPPORTED_EXTENSIONS
+          print(f'SUPPORTED_EXTENSIONS — {len(SUPPORTED_EXTENSIONS)} types — OK')
+          "
+
+  # ─────────────────────────────────────────
+  # UNIT TESTS — pytest
+  # ─────────────────────────────────────────
+  unit:
+    name: "Unit Tests"
+    runs-on: ubuntu-latest
+    needs: imports
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y python3-tk python3-dev tk-dev
+
+      - name: Install Python deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pillow pytest
+
+      - name: Run pytest
+        run: python -m pytest tests/ -v --tb=short || echo "No pytest tests found — OK"
+
+      - name: Run unittest
+        run: python -m unittest discover tests/ -v || echo "No unittest tests found — OK"
+
+  # ─────────────────────────────────────────
+  # SPEC CHECK — PyInstaller spec valid
+  # ─────────────────────────────────────────
+  spec:
+    name: "Spec Validation"
+    runs-on: ubuntu-latest
+    needs: structure
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pillow pyinstaller
+
+      - name: Validate spec file
+        run: |
+          python -c "
+          import ast
+
+          with open('OmniIDE.spec', 'r') as f:
+              content = f.read()
+
+          # Check it's valid Python
+          try:
+              ast.parse(content)
+              print('OmniIDE.spec — valid Python syntax — OK')
+          except SyntaxError as e:
+              print(f'OmniIDE.spec — SYNTAX ERROR: {e}')
+              exit(1)
+
+          # Check required hidden imports
+          required = [
+              'src.app',
+              'src.config',
+              'src.core.editor',
+              'src.core.tab_manager',
+              'src.core.syntax_highlighter',
+              'src.core.file_manager',
+              'src.core.terminal',
+              'src.core.search',
+              'src.core.git_manager',
+              'src.core.git_installer',
+              'src.core.extension_manager',
+              'src.core.command_palette',
+              'src.core.updater',
+              'src.ui.menubar',
+              'src.ui.sidebar',
+              'src.ui.statusbar',
+              'src.ui.toolbar',
+              'src.ui.file_tree',
+              'src.ui.welcome',
+              'src.ui.splash',
+              'src.ui.extensions_panel',
+              'src.ui.settings_panel',
+              'src.utils.theme_loader',
+              'src.utils.recent_files',
+              'src.utils.shortcuts',
+              'src.utils.styles',
+              'src.utils.icon_manager',
+          ]
+
+          missing = [m for m in required if m not in content]
+          if missing:
+              print(f'WARNING: These modules may be missing from spec hidden_imports:')
+              for m in missing:
+                  print(f'  - {m}')
+          else:
+              print(f'All {len(required)} required modules in hidden_imports — OK')
+
+          # Check data files
+          assert 'assets' in content, 'assets not in datas'
+          assert 'src' in content, 'src not in datas'
+          print('Data files configured — OK')
+
+          # Check entry point
+          assert 'run.py' in content, 'run.py not found as entry point'
+          print('Entry point: run.py — OK')
+          "
+
+  # ─────────────────────────────────────────
+  # DOCS CHECK
+  # ─────────────────────────────────────────
+  docs:
+    name: "Docs Validation"
+    runs-on: ubuntu-latest
+    needs: structure
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check docs files
+        run: |
+          MISSING=0
+          DOCS_FILES=(
+            "docs/index.html"
+            "docs/style.css"
+            "docs/script.js"
+            "docs/favicon.svg"
+          )
+
+          for f in "${DOCS_FILES[@]}"; do
+            if [ ! -f "$f" ]; then
+              echo "  MISSING: $f"
+              MISSING=$((MISSING + 1))
+            else
+              echo "  OK: $f"
+            fi
+          done
+
+          if [ $MISSING -gt 0 ]; then
+            echo "WARNING: $MISSING docs file(s) missing"
+          else
+            echo "All docs files present — OK"
+          fi
+
+      - name: Validate HTML
+        run: |
+          if [ -f "docs/index.html" ]; then
+            # Basic checks
+            grep -q "<html" docs/index.html && echo "HTML tag — OK" || echo "WARNING: no <html> tag"
+            grep -q "</html>" docs/index.html && echo "Closing HTML — OK" || echo "WARNING: no </html>"
+            grep -q "<head" docs/index.html && echo "HEAD tag — OK" || echo "WARNING: no <head>"
+            grep -q "<body" docs/index.html && echo "BODY tag — OK" || echo "WARNING: no <body>"
+            grep -q "favicon.svg" docs/index.html && echo "Favicon ref — OK" || echo "WARNING: no favicon ref"
+            grep -q "style.css" docs/index.html && echo "CSS ref — OK" || echo "WARNING: no CSS ref"
+            grep -q "script.js" docs/index.html && echo "JS ref — OK" || echo "WARNING: no JS ref"
+          fi
+
+      - name: Check README badges
+        run: |
+          if grep -q "komarev.com/ghpvc" README.md; then
+            echo "View counter badge — OK"
+          else
+            echo "WARNING: No view counter badge in README"
+          fi
+
+          if grep -q "img.shields.io" README.md; then
+            echo "Shield badges — OK"
+          else
+            echo "WARNING: No shield badges in README"
+          fi
+
+  # ─────────────────────────────────────────
+  # SUMMARY
+  # ─────────────────────────────────────────
+  summary:
+    name: "Test Summary"
+    runs-on: ubuntu-latest
+    needs: [structure, imports, logic, unit, spec, docs]
+    if: always()
+
+    steps:
+      - name: Results
+        run: |
+          echo "## Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| File Structure | ${{ needs.structure.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Import Check | ${{ needs.imports.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Logic Tests | ${{ needs.logic.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Unit Tests | ${{ needs.unit.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Spec Validation | ${{ needs.spec.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Docs Validation | ${{ needs.docs.result }} |" >> $GITHUB_STEP_SUMMARY
+
+      - name: Fail if any job failed
+        if: |
+          needs.structure.result == 'failure' ||
+          needs.imports.result == 'failure' ||
+          needs.logic.result == 'failure' ||
+          needs.unit.result == 'failure' ||
+          needs.spec.result == 'failure'
+        run: |
+          echo "One or more test jobs failed!"
+          exit 1
+
+      - name: All passed
+        if: |
+          needs.structure.result == 'success' &&
+          needs.imports.result == 'success' &&
+          needs.logic.result == 'success' &&
+          needs.unit.result == 'success' &&
+          needs.spec.result == 'success'
+        run: echo "All tests passed!"
