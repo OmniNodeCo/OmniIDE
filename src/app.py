@@ -1,4 +1,4 @@
-"""Main application — v1.0.3."""
+"""Main application — v1.0.4."""
 
 import tkinter as tk
 import tkinter.ttk as tkttk
@@ -42,6 +42,7 @@ class OmniIDEApp:
         from src.core.terminal import Terminal
         from src.core.search import SearchBar
         from src.core.git_manager import GitManager
+        from src.core.git_installer import GitInstaller
         from src.core.extension_manager import ExtensionManager
         from src.core.command_palette import CommandPalette
         from src.core.updater import Updater
@@ -67,6 +68,7 @@ class OmniIDEApp:
         self.recent_files_manager = RecentFilesManager()
         self.file_manager = FileManager(self)
         self.git_manager = GitManager(self)
+        self.git_installer = GitInstaller(self)
         self.extension_manager = ExtensionManager(self)
         self.updater = Updater(self)
         self.settings_panel = SettingsPanel(self)
@@ -106,6 +108,9 @@ class OmniIDEApp:
         self.root.deiconify()
         self._show_welcome()
         self.root.focus_force()
+
+        # Check for Git installation
+        self.root.after(500, self.git_installer.check_and_prompt)
 
         # Auto check for updates
         self.updater.check_on_startup()

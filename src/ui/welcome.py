@@ -1,4 +1,4 @@
-"""Welcome tab — v1.0.3."""
+"""Welcome tab — v1.0.4."""
 
 from src.config import APP_NAME, APP_VERSION, APP_AUTHOR
 

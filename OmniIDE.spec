@@ -74,6 +74,7 @@ hidden_imports = [
     "zipfile",
     "webbrowser",
     "tkinter.font",
+    "src.core.git_installer",
 ]
 
 datas = [

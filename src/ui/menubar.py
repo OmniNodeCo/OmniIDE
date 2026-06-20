@@ -1,4 +1,4 @@
-"""Menu bar — v1.0.3 with Settings and Check for Updates."""
+"""Menu bar — v1.0.4 with Settings and Check for Updates."""
 
 import tkinter as tk
 

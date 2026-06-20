@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OmniIDE — Fast, Modern, Lightweight Desktop IDE</title>
+    <meta name="description" content="OmniIDE by OmniNodeCo — A fast, modern, lightweight desktop IDE. No Electron. No bloat. Pure speed.">
+    <meta name="author" content="OmniNodeCo">
+    <meta property="og:title" content="OmniIDE — Desktop IDE">
+    <meta property="og:description" content="A fast, modern, lightweight desktop IDE built from scratch. No Electron.">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://omninodeco.github.io/OmniIDE">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- NAV -->
+    <nav id="navbar">
+        <div class="nav-inner">
+            <a href="#" class="nav-logo">
+                <img src="favicon.svg" alt="OmniIDE" class="nav-logo-icon">
+                <span class="logo-text">OmniIDE</span>
+            </a>
+            <div class="nav-links">
+                <a href="#features">Features</a>
+                <a href="#screenshots">Screenshots</a>
+                <a href="#download">Download</a>
+                <a href="#shortcuts">Shortcuts</a>
+                <a href="#news">News</a>
+                <a href="#faq">FAQ</a>
+                <a href="https://github.com/OmniNodeCo/OmniIDE" target="_blank" class="nav-github">GitHub</a>
+            </div>
+            <button class="nav-toggle" onclick="toggleMenu()" aria-label="Menu">
+                <span></span><span></span><span></span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- HERO -->
+    <section id="hero">
+        <div class="hero-bg"></div>
+        <div class="hero-content">
+            <div class="hero-icon">
+                <img src="favicon.svg" alt="OmniIDE Logo" class="hero-logo-img">
+                <div class="hero-ring ring-outer"></div>
+                <div class="hero-ring ring-inner"></div>
+            </div>
+            <h1>Omni<span class="accent">IDE</span></h1>
+            <p class="hero-sub">by OmniNodeCo</p>
+            <p class="hero-tagline">A fast, modern, lightweight desktop IDE.<br>No Electron. No bloat. Pure speed.</p>
+            <div class="hero-buttons">
+                <a href="#download" class="btn btn-primary">Download v1.0.4</a>
+                <a href="https://github.com/OmniNodeCo/OmniIDE" target="_blank" class="btn btn-outline">View on GitHub</a>
+            </div>
+            <div class="hero-stats">
+                <div class="stat">
+                    <span class="stat-num">&lt;2s</span>
+                    <span class="stat-label">Startup</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-num">&lt;30MB</span>
+                    <span class="stat-label">Size</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-num">3</span>
+                    <span class="stat-label">Platforms</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-num">0</span>
+                    <span class="stat-label">Electron</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FEATURES -->
+    <section id="features">
+        <h2>Features</h2>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon-svg">
+                    <svg viewBox="0 0 24 24" width="32" height="32"><path d="M4 2h10l6 6v14H4V2z" fill="none" stroke="#89b4fa" stroke-width="1.5" stroke-linejoin="round"/><path d="M14 2v6h6" fill="none" stroke="#89b4fa" stroke-width="1.5" stroke-linejoin="round"/><line x1="8" y1="12" x2="16" y2="12" stroke="#89b4fa" stroke-width="1.2"/><line x1="8" y1="15" x2="14" y2="15" stroke="#89b4fa" stroke-width="1.2"/><line x1="8" y1="18" x2="12" y2="18" stroke="#89b4fa" stroke-width="1.2"/></svg>
+                </div>
+                <h3>Code Editor</h3>
+                <p>Multi-tab editor with syntax highlighting for Python, JavaScript, HTML, CSS, JSON, and more. Line numbers, auto-indent, bracket matching.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon-svg">
+                    <svg viewBox="0 0 24 24" width="32" height="32"><rect x="2" y="3" width="20" height="18" rx="3" fill="none" stroke="#a6e3a1" stroke-width="1.5"/><polyline points="6,9 9,12 6,15" fill="none" stroke="#a6e3a1" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="15" x2="18" y2="15" stroke="#a6e3a1" stroke-width="1.5" stroke-linecap="round"/></svg>
+                </div>
+                <h3>Real Terminal</h3>
+                <p>Full interactive shell — not fake commands. Auto-detects Bash, PowerShell, CMD, Zsh, Fish. Command history, Ctrl+C interrupt.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon-svg">
+                    <svg viewBox="0 0 24 24" width="32" height="32"><circle cx="12" cy="12" r="9" fill="none" stroke="#f38ba8" stroke-width="1.5"/><circle cx="12" cy="6" r="1.5" fill="#f38ba8"/><circle cx="12" cy="18" r="1.5" fill="#f38ba8"/><circle cx="6" cy="15" r="1.5" fill="#f38ba8"/><line x1="12" y1="7.5" x2="12" y2="16.5" stroke="#f38ba8" stroke-width="1.2"/><line x1="7.2" y1="14" x2="12" y2="7.5" stroke="#f38ba8" stroke-width="1.2"/></svg>
+                </div>
+                <h3>Git Integration</h3>
+                <p>Clone, init, commit, push, pull, diff, log, branches. Auto-detects repos. Prompts to install Git if missing.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon-svg">
+                    <svg viewBox="0 0 24 24" width="32" height="32"><rect x="3" y="3" width="7" height="7" rx="1.5" fill="none" stroke="#cba6f7" stroke-width="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5" fill="none" stroke="#cba6f7" stroke-width="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5" fill="none" stroke="#cba6f7" stroke-width="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5" fill="none" stroke="#cba6f7" stroke-width="1.5"/></svg>
+                </div>
+                <h3>Extensions</h3>
+                <p>Browse the VS Code Marketplace. Search, install, and manage extensions directly from the sidebar.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon-svg">
+                    <svg viewBox="0 0 24 24" width="32" height="32"><rect x="3" y="4" width="18" height="16" rx="3" fill="none" stroke="#f9e2af" stroke-width="1.5"/><line x1="7" y1="9" x2="17" y2="9" stroke="#f9e2af" stroke-width="1.2" stroke-linecap="round"/><line x1="7" y1="12" x2="14" y2="12" stroke="#f9e2af" stroke-width="1.2" stroke-linecap="round"/><line x1="7" y1="15" x2="11" y2="15" stroke="#f9e2af" stroke-width="1.2" stroke-linecap="round"/><text x="18" y="8" font-size="6" fill="#f9e2af" font-family="monospace">&gt;</text></svg>
+                </div>
+                <h3>Command Palette</h3>
+                <p>Ctrl+Shift+P opens 50+ fuzzy-searchable commands. Go to line, toggle comment, switch theme, and more.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon-svg">
+                    <svg viewBox="0 0 24 24" width="32" height="32"><circle cx="12" cy="12" r="3.5" fill="none" stroke="#a6adc8" stroke-width="1.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.93 4.93l2.12 2.12M16.95 16.95l2.12 2.12M4.93 19.07l2.12-2.12M16.95 7.05l2.12-2.12" stroke="#a6adc8" stroke-width="1.5" stroke-linecap="round"/></svg>
+                </div>
+                <h3>Settings GUI</h3>
+                <p>Visual settings panel with live preview. Change font, theme, tab size, word wrap. Searchable and resettable.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon-svg">
+                    <svg viewBox="0 0 24 24" width="32" height="32"><circle cx="12" cy="12" r="9" fill="none" stroke="#f5c2e7" stroke-width="1.5"/><path d="M12 3a9 9 0 0 1 0 18V3z" fill="#f5c2e7" opacity="0.5"/></svg>
+                </div>
+                <h3>Themes</h3>
+                <p>Beautiful dark and light themes inspired by Catppuccin. Custom SVG icons. Round modern buttons with hover effects.</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon-svg">
+                    <svg viewBox="0 0 24 24" width="32" height="32"><polyline points="4,14 8,10 4,6" fill="none" stroke="#94e2d5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><polyline points="20,10 16,14 20,18" fill="none" stroke="#94e2d5" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="4" x2="12" y2="20" stroke="#94e2d5" stroke-width="1.5" stroke-linecap="round"/></svg>
+                </div>
+                <h3>Auto Updates</h3>
+                <p>Checks GitHub for new releases on startup. Shows changelog, version comparison, and platform-specific download.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- SCREENSHOTS -->
+    <section id="screenshots">
+        <h2>Screenshots</h2>
+        <p class="section-sub">Click to enlarge</p>
+        <div class="screenshots-grid">
+            <div class="screenshot-placeholder" onclick="openLightbox(this)">
+                <div class="placeholder-content">
+                    <span>Editor View</span>
+                    <small>Dark theme with syntax highlighting</small>
+                </div>
+            </div>
+            <div class="screenshot-placeholder" onclick="openLightbox(this)">
+                <div class="placeholder-content">
+                    <span>Terminal</span>
+                    <small>Interactive shell with PowerShell</small>
+                </div>
+            </div>
+            <div class="screenshot-placeholder" onclick="openLightbox(this)">
+                <div class="placeholder-content">
+                    <span>Git Panel</span>
+                    <small>Source control sidebar</small>
+                </div>
+            </div>
+            <div class="screenshot-placeholder" onclick="openLightbox(this)">
+                <div class="placeholder-content">
+                    <span>Extensions</span>
+                    <small>VS Code Marketplace browser</small>
+                </div>
+            </div>
+            <div class="screenshot-placeholder" onclick="openLightbox(this)">
+                <div class="placeholder-content">
+                    <span>Command Palette</span>
+                    <small>Ctrl+Shift+P quick launcher</small>
+                </div>
+            </div>
+            <div class="screenshot-placeholder" onclick="openLightbox(this)">
+                <div class="placeholder-content">
+                    <span>Settings</span>
+                    <small>Visual settings editor</small>
+                </div>
+            </div>
+        </div>
+        <p class="contribute-note">Want to add real screenshots? <a href="https://github.com/OmniNodeCo/OmniIDE/pulls" target="_blank">Submit a PR</a></p>
+    </section>
+
+    <!-- LIGHTBOX -->
+    <div id="lightbox" class="lightbox" onclick="closeLightbox()">
+        <div class="lightbox-content">
+            <span class="lightbox-close">&times;</span>
+            <div class="lightbox-placeholder">
+                <span id="lightbox-title">Screenshot</span>
+                <small id="lightbox-desc">Description</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- DOWNLOAD -->
+    <section id="download">
+        <h2>Download</h2>
+        <p class="section-sub">No install needed. Just download and run.</p>
+        <div class="download-cards">
+            <div class="download-card" id="dl-windows">
+                <div class="dl-icon-svg">
+                    <svg viewBox="0 0 24 24" width="40" height="40"><path d="M3 5.5l7.5-1v7H3V5.5zM3 12.5h7.5v7L3 18.5v-6zM11.5 4.3L21 3v8.5h-9.5V4.3zM11.5 12.5H21V21l-9.5-1.3v-7.2z" fill="#89b4fa"/></svg>
+                </div>
+                <h3>Windows</h3>
+                <p>Windows 10/11 (64-bit)</p>
+                <code>OmniIDE.exe</code>
+                <a href="https://github.com/OmniNodeCo/OmniIDE/releases/latest/download/OmniIDE.exe" class="btn btn-primary">Download .exe</a>
+                <small>Just double-click to run</small>
+            </div>
+            <div class="download-card" id="dl-macos">
+                <div class="dl-icon-svg">
+                    <svg viewBox="0 0 24 24" width="40" height="40"><path d="M18.7 12.4c-.1-2.2 1.8-3.3 1.9-3.3-1-1.5-2.7-1.7-3.2-1.7-1.4-.1-2.7.8-3.4.8-.7 0-1.8-.8-3-.8-1.5 0-2.9.9-3.7 2.2C5.4 13 6.4 18 8.3 20c.9 1.1 2 2.3 3.4 2.2 1.4-.1 1.9-.9 3.5-.9 1.6 0 2.1.9 3.5.8 1.5 0 2.3-1.1 3.2-2.1 1-1.2 1.4-2.4 1.4-2.4-.1-.1-2.7-1-2.7-4.1zM16.1 5.1c.8-1 1.3-2.3 1.2-3.6-1.1.1-2.5.8-3.3 1.7-.7.8-1.4 2.2-1.2 3.4 1.2.1 2.5-.6 3.3-1.6z" fill="#a6adc8"/></svg>
+                </div>
+                <h3>macOS</h3>
+                <p>macOS 12+ (Intel & Apple Silicon)</p>
+                <code>OmniIDE-macOS.zip</code>
+                <a href="https://github.com/OmniNodeCo/OmniIDE/releases/latest/download/OmniIDE-macOS.zip" class="btn btn-primary">Download .zip</a>
+                <small>Unzip and open OmniIDE.app</small>
+            </div>
+            <div class="download-card" id="dl-linux">
+                <div class="dl-icon-svg">
+                    <svg viewBox="0 0 24 24" width="40" height="40"><path d="M12 2C8.7 2 6 4.3 6 7.5c0 1.5.5 2.6 1.3 3.5-.5.6-.8 1.2-1 2-.4 1.3-.1 2.7.5 3.7-.6.8-1 1.5-1 2.3 0 1.5 1.3 3 3.2 3 .8 0 1.5-.2 2-.5.5.3 1.2.5 2 .5 1.9 0 3.2-1.5 3.2-3 0-.8-.4-1.5-1-2.3.6-1 .9-2.4.5-3.7-.2-.8-.5-1.4-1-2C16.5 10.1 18 8.5 18 7.5 18 4.3 15.3 2 12 2z" fill="none" stroke="#f9e2af" stroke-width="1.3"/><circle cx="10" cy="8" r="1" fill="#f9e2af"/><circle cx="14" cy="8" r="1" fill="#f9e2af"/></svg>
+                </div>
+                <h3>Linux</h3>
+                <p>Ubuntu, Fedora, Arch, Debian</p>
+                <code>OmniIDE-Linux.tar.gz</code>
+                <a href="https://github.com/OmniNodeCo/OmniIDE/releases/latest/download/OmniIDE-Linux.tar.gz" class="btn btn-primary">Download .tar.gz</a>
+                <small>Extract, chmod +x, run</small>
+            </div>
+        </div>
+        <p class="all-releases"><a href="https://github.com/OmniNodeCo/OmniIDE/releases" target="_blank">View all releases →</a></p>
+    </section>
+
+    <!-- SHORTCUTS -->
+    <section id="shortcuts">
+        <h2>Keyboard Shortcuts</h2>
+        <div class="shortcuts-table-wrapper">
+            <table class="shortcuts-table">
+                <thead><tr><th>Action</th><th>Shortcut</th></tr></thead>
+                <tbody>
+                    <tr><td>New File</td><td><kbd>Ctrl</kbd>+<kbd>N</kbd></td></tr>
+                    <tr><td>Open File</td><td><kbd>Ctrl</kbd>+<kbd>O</kbd></td></tr>
+                    <tr><td>Save</td><td><kbd>Ctrl</kbd>+<kbd>S</kbd></td></tr>
+                    <tr><td>Save As</td><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd></td></tr>
+                    <tr><td>Close Tab</td><td><kbd>Ctrl</kbd>+<kbd>W</kbd></td></tr>
+                    <tr><td>Settings</td><td><kbd>Ctrl</kbd>+<kbd>,</kbd></td></tr>
+                    <tr><td>Find & Replace</td><td><kbd>Ctrl</kbd>+<kbd>F</kbd></td></tr>
+                    <tr><td>Go to Line</td><td><kbd>Ctrl</kbd>+<kbd>G</kbd></td></tr>
+                    <tr><td>Toggle Comment</td><td><kbd>Ctrl</kbd>+<kbd>/</kbd></td></tr>
+                    <tr><td>Command Palette</td><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>P</kbd></td></tr>
+                    <tr><td>Toggle Sidebar</td><td><kbd>Ctrl</kbd>+<kbd>B</kbd></td></tr>
+                    <tr><td>Toggle Terminal</td><td><kbd>Ctrl</kbd>+<kbd>`</kbd></td></tr>
+                    <tr><td>Zoom In</td><td><kbd>Ctrl</kbd>+<kbd>+</kbd></td></tr>
+                    <tr><td>Zoom Out</td><td><kbd>Ctrl</kbd>+<kbd>-</kbd></td></tr>
+                    <tr><td>Reset Zoom</td><td><kbd>Ctrl</kbd>+<kbd>0</kbd></td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- NEWS -->
+    <section id="news">
+        <h2>News & Changelog</h2>
+        <div class="timeline">
+            <div class="timeline-item">
+                <div class="timeline-dot"></div>
+                <div class="timeline-content">
+                    <h3>v1.0.4</h3>
+                    <span class="timeline-date">Latest</span>
+                    <ul>
+                        <li>Documentation website</li>
+                        <li>Git auto-install prompt</li>
+                        <li>Improved stability</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="timeline-item">
+                <div class="timeline-dot"></div>
+                <div class="timeline-content">
+                    <h3>v1.0.4</h3>
+                    <ul>
+                        <li>Settings GUI panel (Ctrl+,)</li>
+                        <li>Auto-update checker</li>
+                        <li>Live-apply settings</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="timeline-item">
+                <div class="timeline-dot"></div>
+                <div class="timeline-content">
+                    <h3>v1.0.2</h3>
+                    <ul>
+                        <li>Command Palette with 50+ commands</li>
+                        <li>Fixed button hover bug</li>
+                        <li>Go to Line, Toggle Comment</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="timeline-item">
+                <div class="timeline-dot"></div>
+                <div class="timeline-content">
+                    <h3>v1.0.1</h3>
+                    <ul>
+                        <li>VS Code Extension marketplace</li>
+                        <li>Git integration</li>
+                        <li>Real interactive terminal</li>
+                        <li>SVG icon system</li>
+                        <li>Animated splash screen</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="timeline-item">
+                <div class="timeline-dot"></div>
+                <div class="timeline-content">
+                    <h3>v1.0.0</h3>
+                    <ul>
+                        <li>Initial release</li>
+                        <li>Multi-tab editor</li>
+                        <li>Syntax highlighting</li>
+                        <li>Dark/Light themes</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FAQ -->
+    <section id="faq">
+        <h2>FAQ</h2>
+        <div class="faq-list">
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">Is OmniIDE free?<span class="faq-arrow">▸</span></button>
+                <div class="faq-answer"><p>Yes, OmniIDE is completely free and open source under the MIT License.</p></div>
+            </div>
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">Does it use Electron?<span class="faq-arrow">▸</span></button>
+                <div class="faq-answer"><p>No. OmniIDE is built with Python and Tkinter. No Electron, no Chromium, no Node.js. It starts in under 2 seconds and uses minimal memory.</p></div>
+            </div>
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">What languages does it support?<span class="faq-arrow">▸</span></button>
+                <div class="faq-answer"><p>Syntax highlighting for Python, JavaScript, TypeScript, HTML, CSS, JSON, C, C++, Java, Go, Rust, PHP, Ruby, SQL, Shell, YAML, TOML, XML, Markdown, and more.</p></div>
+            </div>
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">Can I install VS Code extensions?<span class="faq-arrow">▸</span></button>
+                <div class="faq-answer"><p>You can browse and download extensions from the VS Code Marketplace. Language packs and themes work best.</p></div>
+            </div>
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">Does it auto-update?<span class="faq-arrow">▸</span></button>
+                <div class="faq-answer"><p>OmniIDE checks GitHub for new releases on startup (configurable). It shows a dialog with the changelog and a download button — it does not update in-place.</p></div>
+            </div>
+            <div class="faq-item">
+                <button class="faq-question" onclick="toggleFaq(this)">How do I report a bug?<span class="faq-arrow">▸</span></button>
+                <div class="faq-answer"><p>Open an issue on <a href="https://github.com/OmniNodeCo/OmniIDE/issues" target="_blank">GitHub Issues</a>. Include your OS, version, and steps to reproduce.</p></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer>
+        <div class="footer-inner">
+            <div class="footer-col">
+                <div class="footer-logo">
+                    <img src="favicon.svg" alt="OmniIDE" width="28" height="28">
+                    <h4>OmniIDE</h4>
+                </div>
+                <p>A fast, modern, lightweight desktop IDE.<br>Built from scratch by OmniNodeCo.</p>
+            </div>
+            <div class="footer-col">
+                <h4>Links</h4>
+                <a href="#download">Download</a>
+                <a href="#features">Features</a>
+                <a href="#news">Changelog</a>
+                <a href="https://github.com/OmniNodeCo/OmniIDE" target="_blank">GitHub</a>
+            </div>
+            <div class="footer-col">
+                <h4>Resources</h4>
+                <a href="https://github.com/OmniNodeCo/OmniIDE/issues" target="_blank">Report Bug</a>
+                <a href="https://github.com/OmniNodeCo/OmniIDE/pulls" target="_blank">Contribute</a>
+                <a href="https://github.com/OmniNodeCo/OmniIDE/blob/main/LICENSE" target="_blank">License (MIT)</a>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p>&copy; 2024 OmniNodeCo. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

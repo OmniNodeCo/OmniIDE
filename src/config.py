@@ -4,11 +4,12 @@ import os
 import sys
 
 APP_NAME = "OmniIDE"
-APP_VERSION = "1.0.3"
+APP_VERSION = "1.0.4"
 APP_AUTHOR = "OmniNodeCo"
 APP_REPO = "OmniNodeCo/OmniIDE"
 APP_GITHUB_API = f"https://api.github.com/repos/{APP_REPO}/releases/latest"
 APP_RELEASES_URL = f"https://github.com/{APP_REPO}/releases"
+APP_WEBSITE = "https://omninodeco.github.io/OmniIDE"
 
 if getattr(sys, 'frozen', False):
     BASE_DIR = sys._MEIPASS
@@ -28,6 +29,12 @@ os.makedirs(EXTENSIONS_DIR, exist_ok=True)
 
 VSCODE_MARKETPLACE_URL = "https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery"
 VSCODE_MARKETPLACE_VERSION = "7.2-preview.1"
+
+GIT_DOWNLOAD_URLS = {
+    "win32": "https://git-scm.com/download/win",
+    "darwin": "https://git-scm.com/download/mac",
+    "linux": "https://git-scm.com/download/linux",
+}
 
 DEFAULT_SETTINGS = {
     "theme": "dark",
@@ -50,6 +57,7 @@ DEFAULT_SETTINGS = {
     "show_whitespace": False,
     "cursor_blink": True,
     "minimap_enabled": False,
+    "suppress_git_prompt": False,
 }
 
 SUPPORTED_EXTENSIONS = {
@@ -94,7 +102,6 @@ FILE_DIALOG_TYPES = [
     ("Markdown", "*.md"),
 ]
 
-# Available font families to show in settings
 FONT_OPTIONS = [
     "Consolas",
     "Courier New",

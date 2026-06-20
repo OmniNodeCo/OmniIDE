@@ -10,7 +10,7 @@
 <br><br>
 
 <!-- Badges -->
-[![Version](https://img.shields.io/badge/version-1.0.3-89b4fa?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0Ij48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIxMCIgZmlsbD0iIzFlMWUyZSIgc3Ryb2tlPSIjODliNGZhIiBzdHJva2Utd2lkdGg9IjEuNSIvPjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IjYuNSIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjY2JhNmY3IiBzdHJva2Utd2lkdGg9IjEuNSIvPjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IjEuNSIgZmlsbD0iI2Y1YzJlNyIvPjwvc3ZnPg==&logoColor=white)](https://github.com/OmniNodeCo/OmniIDE/releases/latest)
+[![Version](https://img.shields.io/badge/version-1.0.4-89b4fa?style=for-the-badge&logo=data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0Ij48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSIxMCIgZmlsbD0iIzFlMWUyZSIgc3Ryb2tlPSIjODliNGZhIiBzdHJva2Utd2lkdGg9IjEuNSIvPjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IjYuNSIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjY2JhNmY3IiBzdHJva2Utd2lkdGg9IjEuNSIvPjxjaXJjbGUgY3g9IjEyIiBjeT0iMTIiIHI9IjEuNSIgZmlsbD0iI2Y1YzJlNyIvPjwvc3ZnPg==&logoColor=white)](https://github.com/OmniNodeCo/OmniIDE/releases/latest)
 [![License](https://img.shields.io/badge/license-MIT-a6e3a1?style=for-the-badge)](LICENSE)
 [![Python](https://img.shields.io/badge/python-3.10+-cba6f7?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
 [![Platform](https://img.shields.io/badge/platform-Windows%20|%20macOS%20|%20Linux-f9e2af?style=for-the-badge)](#installation)
@@ -306,7 +306,7 @@ Contribution Ideas
 📖 Documentation improvements
 🧪 More unit tests
 📋 Changelog
-v1.0.3 (Latest)
+v1.0.4 (Latest)
 ⚙️ Settings GUI panel (Ctrl+,)
 🔄 Auto-update checker (GitHub Releases)
 🎯 Live-apply settings (font, theme, wrap)

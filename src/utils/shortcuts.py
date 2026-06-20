@@ -1,4 +1,4 @@
-"""Keyboard shortcuts — v1.0.3 with settings shortcut."""
+"""Keyboard shortcuts — v1.0.4 with settings shortcut."""
 
 
 class ShortcutManager:

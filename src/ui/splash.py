@@ -1,4 +1,4 @@
-"""Startup splash screen — v1.0.3."""
+"""Startup splash screen — v1.0.4."""
 
 import tkinter as tk
 import math
@@ -44,35 +44,35 @@ class SplashScreen:
         cx, cy = self.width // 2, 110
         self.cx, self.cy = cx, cy
 
-        self.canvas.create_oval(cx - 50, cy - 50, cx + 50, cy + 50, outline=self.accent, width=3)
-        self.canvas.create_oval(cx - 32, cy - 32, cx + 32, cy + 32, outline=self.accent2, width=2)
-        self.canvas.create_oval(cx - 6, cy - 6, cx + 6, cy + 6, fill="#f5c2e7", outline="")
+        self.canvas.create_oval(cx-50, cy-50, cx+50, cy+50, outline=self.accent, width=3)
+        self.canvas.create_oval(cx-32, cy-32, cx+32, cy+32, outline=self.accent2, width=2)
+        self.canvas.create_oval(cx-6, cy-6, cx+6, cy+6, fill="#f5c2e7", outline="")
 
-        self.canvas.create_text(cx - 18, cy, text="<", font=("Consolas", 18, "bold"), fill=self.accent2)
-        self.canvas.create_text(cx + 18, cy, text=">", font=("Consolas", 18, "bold"), fill=self.accent)
+        self.canvas.create_text(cx-18, cy, text="<", font=("Consolas", 18, "bold"), fill=self.accent2)
+        self.canvas.create_text(cx+18, cy, text=">", font=("Consolas", 18, "bold"), fill=self.accent)
 
         self.orb_dots = []
         for _ in range(6):
             dot_id = self.canvas.create_oval(0, 0, 5, 5, fill=self.accent, outline="")
             self.orb_dots.append(dot_id)
 
-        self.canvas.create_text(cx, cy + 70, text="OmniIDE", font=("Segoe UI", 28, "bold"), fill=self.fg)
-        self.canvas.create_text(cx, cy + 95, text="by OmniNodeCo", font=("Segoe UI", 11), fill=self.fg_dim)
+        self.canvas.create_text(cx, cy+70, text="OmniIDE", font=("Segoe UI", 28, "bold"), fill=self.fg)
+        self.canvas.create_text(cx, cy+95, text="by OmniNodeCo", font=("Segoe UI", 11), fill=self.fg_dim)
 
         self.status_text = self.canvas.create_text(
-            cx, self.height - 50, text="Starting up...",
+            cx, self.height-50, text="Starting up...",
             font=("Segoe UI", 10), fill=self.fg_dim,
         )
 
         bar_y = self.height - 28
         bar_pad = 60
-        self._rounded_rect(bar_pad, bar_y, self.width - bar_pad, bar_y + 6, 3, "#313244")
-        self.progress_bar = self.canvas.create_rectangle(bar_pad, bar_y, bar_pad, bar_y + 6, fill=self.accent, outline="")
+        self._rounded_rect(bar_pad, bar_y, self.width-bar_pad, bar_y+6, 3, "#313244")
+        self.progress_bar = self.canvas.create_rectangle(bar_pad, bar_y, bar_pad, bar_y+6, fill=self.accent, outline="")
         self.bar_y = bar_y
         self.bar_pad = bar_pad
-        self.bar_width = self.width - 2 * bar_pad
+        self.bar_width = self.width - 2*bar_pad
 
-        self.canvas.create_text(self.width - 12, 12, text="v1.0.3", font=("Consolas", 8), fill=self.fg_dim, anchor="ne")
+        self.canvas.create_text(self.width-12, 12, text="v1.0.4", font=("Consolas", 8), fill=self.fg_dim, anchor="ne")
 
         self.angle = 0
         self.alpha = 0.0
@@ -112,8 +112,8 @@ class SplashScreen:
             r = 44
             dx = self.cx + r * math.cos(rad)
             dy = self.cy + r * math.sin(rad)
-            pulse = 2 + math.sin(math.radians(self.angle * 2 + offset)) * 1.5
-            self.canvas.coords(dot_id, dx - pulse, dy - pulse, dx + pulse, dy + pulse)
+            pulse = 2 + math.sin(math.radians(self.angle*2 + offset)) * 1.5
+            self.canvas.coords(dot_id, dx-pulse, dy-pulse, dx+pulse, dy+pulse)
             color = self.accent if i % 2 == 0 else self.accent2
             self.canvas.itemconfig(dot_id, fill=color)
 
@@ -129,7 +129,7 @@ class SplashScreen:
     def set_progress(self, percent):
         try:
             fill_w = (percent / 100.0) * self.bar_width
-            self.canvas.coords(self.progress_bar, self.bar_pad, self.bar_y, self.bar_pad + fill_w, self.bar_y + 6)
+            self.canvas.coords(self.progress_bar, self.bar_pad, self.bar_y, self.bar_pad+fill_w, self.bar_y+6)
             if percent < 40:
                 color = self.accent
             elif percent < 75:

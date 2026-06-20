@@ -73,5 +73,5 @@
 
   <!-- Version badge -->
   <rect x="298" y="83" width="46" height="16" rx="8" fill="#313244" opacity="0.9"/>
-  <text x="321" y="95" font-family="'Segoe UI','Inter',monospace" font-size="9" font-weight="600" letter-spacing="1" fill="#89b4fa" text-anchor="middle">v1.0.3</text>
+  <text x="321" y="95" font-family="'Segoe UI','Inter',monospace" font-size="9" font-weight="600" letter-spacing="1" fill="#89b4fa" text-anchor="middle">v1.0.4</text>
 </svg>
