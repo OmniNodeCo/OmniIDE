@@ -1,0 +1,30 @@
+name: Track Views
+
+on:
+  schedule:
+    # Run every 6 hours
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  track:
+    name: Update View Counter
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Track traffic
+        uses: yi-Xu-0100/traffic-to-badge@v1.9.2
+        with:
+          static_list: '[]'
+          traffic_branch: traffic
+          views_color: '89b4fa'
+          clones_color: 'cba6f7'
+          logo: github
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

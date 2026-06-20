@@ -1,31 +1,21 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 120" width="400" height="120">
   <defs>
-
-    <!-- Main gradient for the icon circle -->
     <radialGradient id="iconGrad" cx="50%" cy="35%" r="65%">
-      <stop offset="0%"   stop-color="#89b4fa"/>
+      <stop offset="0%" stop-color="#89b4fa"/>
       <stop offset="100%" stop-color="#1e1e2e"/>
     </radialGradient>
-
-    <!-- Accent ring gradient -->
     <radialGradient id="ringGrad" cx="40%" cy="30%" r="70%">
-      <stop offset="0%"   stop-color="#cba6f7"/>
+      <stop offset="0%" stop-color="#cba6f7"/>
       <stop offset="100%" stop-color="#89b4fa"/>
     </radialGradient>
-
-    <!-- Text gradient -->
     <linearGradient id="textGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%"   stop-color="#cdd6f4"/>
+      <stop offset="0%" stop-color="#cdd6f4"/>
       <stop offset="100%" stop-color="#89b4fa"/>
     </linearGradient>
-
-    <!-- Subtitle gradient -->
     <linearGradient id="subGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%"   stop-color="#cba6f7"/>
+      <stop offset="0%" stop-color="#cba6f7"/>
       <stop offset="100%" stop-color="#74c7ec"/>
     </linearGradient>
-
-    <!-- Glow filter for icon -->
     <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
       <feGaussianBlur stdDeviation="4" result="blur"/>
       <feMerge>
@@ -33,8 +23,6 @@
         <feMergeNode in="SourceGraphic"/>
       </feMerge>
     </filter>
-
-    <!-- Glow filter for text -->
     <filter id="textGlow" x="-10%" y="-30%" width="120%" height="160%">
       <feGaussianBlur stdDeviation="2" result="blur"/>
       <feMerge>
@@ -42,144 +30,48 @@
         <feMergeNode in="SourceGraphic"/>
       </feMerge>
     </filter>
-
-    <!-- Drop shadow for icon -->
     <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
       <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#89b4fa" flood-opacity="0.35"/>
     </filter>
-
-    <!-- Clip circle -->
-    <clipPath id="circleClip">
-      <circle cx="60" cy="60" r="50"/>
-    </clipPath>
-
   </defs>
 
-  <!-- ─── Background (transparent) ─── -->
-  <!-- Uncomment below for a solid dark card background -->
-  <!--
-  <rect width="400" height="120" rx="16" fill="#1e1e2e"/>
-  -->
-
-  <!-- ════════════════════════════════ -->
-  <!--          ICON MARK              -->
-  <!-- ════════════════════════════════ -->
-
   <!-- Outer glow ring -->
-  <circle
-    cx="60" cy="60" r="54"
-    fill="none"
-    stroke="#89b4fa"
-    stroke-width="1"
-    opacity="0.2"
-    filter="url(#glow)"
-  />
+  <circle cx="60" cy="60" r="54" fill="none" stroke="#89b4fa" stroke-width="1" opacity="0.2" filter="url(#glow)"/>
 
-  <!-- Main icon background circle -->
-  <circle
-    cx="60" cy="60" r="50"
-    fill="url(#iconGrad)"
-    filter="url(#shadow)"
-  />
+  <!-- Main icon circle -->
+  <circle cx="60" cy="60" r="50" fill="url(#iconGrad)" filter="url(#shadow)"/>
 
   <!-- Accent ring -->
-  <circle
-    cx="60" cy="60" r="38"
-    fill="none"
-    stroke="url(#ringGrad)"
-    stroke-width="4"
-    opacity="0.85"
-  />
+  <circle cx="60" cy="60" r="38" fill="none" stroke="url(#ringGrad)" stroke-width="4" opacity="0.85"/>
 
   <!-- Inner dark circle -->
-  <circle
-    cx="60" cy="60" r="24"
-    fill="#181825"
-  />
+  <circle cx="60" cy="60" r="24" fill="#181825"/>
 
-  <!-- Code brackets  <  > -->
   <!-- Left bracket < -->
-  <text
-    x="46" y="67"
-    font-family="'Consolas', 'Courier New', monospace"
-    font-size="22"
-    font-weight="bold"
-    fill="#cba6f7"
-    text-anchor="middle"
-    filter="url(#glow)"
-  >&lt;</text>
+  <text x="46" y="67" font-family="'Consolas','Courier New',monospace" font-size="22" font-weight="bold" fill="#cba6f7" text-anchor="middle" filter="url(#glow)">&lt;</text>
 
   <!-- Right bracket > -->
-  <text
-    x="74" y="67"
-    font-family="'Consolas', 'Courier New', monospace"
-    font-size="22"
-    font-weight="bold"
-    fill="#89b4fa"
-    text-anchor="middle"
-    filter="url(#glow)"
-  >&gt;</text>
+  <text x="74" y="67" font-family="'Consolas','Courier New',monospace" font-size="22" font-weight="bold" fill="#89b4fa" text-anchor="middle" filter="url(#glow)">&gt;</text>
 
-  <!-- Center dot / cursor -->
-  <circle
-    cx="60" cy="60" r="3.5"
-    fill="#f5c2e7"
-    filter="url(#glow)"
-  />
+  <!-- Center dot -->
+  <circle cx="60" cy="60" r="3.5" fill="#f5c2e7" filter="url(#glow)"/>
 
-  <!-- Top highlight shimmer -->
-  <ellipse
-    cx="48" cy="38"
-    rx="14" ry="6"
-    fill="white"
-    opacity="0.07"
-    transform="rotate(-20 48 38)"
-  />
+  <!-- Top highlight -->
+  <ellipse cx="48" cy="38" rx="14" ry="6" fill="white" opacity="0.07" transform="rotate(-20 48 38)"/>
 
-  <!-- ════════════════════════════════ -->
-  <!--           WORDMARK              -->
-  <!-- ════════════════════════════════ -->
+  <!-- "Omni" text -->
+  <text x="128" y="68" font-family="'Segoe UI','Inter','Helvetica Neue',sans-serif" font-size="38" font-weight="300" letter-spacing="1" fill="url(#textGrad)" filter="url(#textGlow)">Omni</text>
 
-  <!-- "Omni" — lighter weight -->
-  <text
-    x="128" y="68"
-    font-family="'Segoe UI', 'Inter', 'Helvetica Neue', sans-serif"
-    font-size="38"
-    font-weight="300"
-    letter-spacing="1"
-    fill="url(#textGrad)"
-    filter="url(#textGlow)"
-  >Omni</text>
+  <!-- "IDE" text -->
+  <text x="231" y="68" font-family="'Segoe UI','Inter','Helvetica Neue',sans-serif" font-size="38" font-weight="700" letter-spacing="2" fill="url(#ringGrad)" filter="url(#textGlow)">IDE</text>
 
-  <!-- "IDE" — bold accent -->
-  <text
-    x="231" y="68"
-    font-family="'Segoe UI', 'Inter', 'Helvetica Neue', sans-serif"
-    font-size="38"
-    font-weight="700"
-    letter-spacing="2"
-    fill="url(#ringGrad)"
-    filter="url(#textGlow)"
-  >IDE</text>
-
-  <!-- Divider line -->
-  <line
-    x1="128" y1="78"
-    x2="316" y2="78"
-    stroke="url(#subGrad)"
-    stroke-width="1"
-    opacity="0.4"
-  />
+  <!-- Divider -->
+  <line x1="128" y1="78" x2="316" y2="78" stroke="url(#subGrad)" stroke-width="1" opacity="0.4"/>
 
   <!-- Tagline -->
-  <text
-    x="128" y="96"
-    font-family="'Segoe UI', 'Inter', 'Helvetica Neue', sans-serif"
-    font-size="11"
-    font-weight="400"
-    letter-spacing="3.5"
-    fill="#a6adc8"
-    opacity="0.85"
-  >BY OMNINODECO</text>
+  <text x="128" y="96" font-family="'Segoe UI','Inter','Helvetica Neue',sans-serif" font-size="11" font-weight="400" letter-spacing="3.5" fill="#a6adc8" opacity="0.85">BY OMNINODECO</text>
 
+  <!-- Version badge -->
+  <rect x="298" y="83" width="46" height="16" rx="8" fill="#313244" opacity="0.9"/>
+  <text x="321" y="95" font-family="'Segoe UI','Inter',monospace" font-size="9" font-weight="600" letter-spacing="1" fill="#89b4fa" text-anchor="middle">v1.0.3</text>
 </svg>
