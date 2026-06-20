@@ -24,12 +24,16 @@ jobs:
 
       - name: Install deps
         run: |
+          sudo apt-get update -y
+          sudo apt-get install -y python3-tk python3-dev tk-dev xvfb
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install pillow
+          pip install pillow pytest
 
-      - name: Run tests
-        run: python -m pytest tests/ -v --tb=short || python -m unittest discover tests/ -v
+      - name: Run all tests
+        run: |
+          xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24" \
+            python -m pytest tests/ -v --tb=short
 
       - name: Verify version
         run: |

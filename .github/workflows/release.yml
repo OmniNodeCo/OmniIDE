@@ -79,10 +79,7 @@ jobs:
           if (Test-Path "dist/OmniIDE.exe") {
             $size = (Get-Item "dist/OmniIDE.exe").Length / 1MB
             Write-Host "Built OmniIDE.exe ($([math]::Round($size,1)) MB)"
-          } else {
-            Write-Host "Build failed"
-            exit 1
-          }
+          } else { exit 1 }
 
       - name: Upload
         uses: actions/upload-artifact@v4
@@ -147,7 +144,6 @@ jobs:
           cd dist
           if [ -d "OmniIDE.app" ]; then zip -r OmniIDE-macOS.zip OmniIDE.app
           else chmod +x OmniIDE && zip -r OmniIDE-macOS.zip OmniIDE; fi
-          ls -lh OmniIDE-macOS.zip
 
       - name: Upload
         uses: actions/upload-artifact@v4
@@ -215,9 +211,7 @@ jobs:
       - name: Package
         run: |
           chmod +x dist/OmniIDE
-          cd dist
-          tar -czvf OmniIDE-Linux.tar.gz OmniIDE
-          ls -lh OmniIDE-Linux.tar.gz
+          cd dist && tar -czvf OmniIDE-Linux.tar.gz OmniIDE
 
       - name: Upload
         uses: actions/upload-artifact@v4

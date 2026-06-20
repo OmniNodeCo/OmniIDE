@@ -14,9 +14,6 @@ permissions:
 
 jobs:
 
-  # ─────────────────────────────────────────
-  # STRUCTURE CHECK
-  # ─────────────────────────────────────────
   structure:
     name: "File Structure"
     runs-on: ubuntu-latest
@@ -70,6 +67,16 @@ jobs:
             "src/utils/recent_files.py"
             "src/utils/shortcuts.py"
             "src/utils/styles.py"
+            "tests/__init__.py"
+            "tests/test_config.py"
+            "tests/test_theme_loader.py"
+            "tests/test_icons.py"
+            "tests/test_updater.py"
+            "tests/test_syntax.py"
+            "tests/test_extensions.py"
+            "tests/test_recent_files.py"
+            "tests/test_git_installer.py"
+            "tests/test_gui.py"
           )
 
           for f in "${FILES[@]}"; do
@@ -88,9 +95,6 @@ jobs:
           fi
           echo "All ${#FILES[@]} required files present"
 
-  # ─────────────────────────────────────────
-  # IMPORT CHECK — every module imports clean
-  # ─────────────────────────────────────────
   imports:
     name: "Import Check"
     runs-on: ubuntu-latest
@@ -147,23 +151,9 @@ jobs:
           from src.utils.recent_files import RecentFilesManager
           from src.utils.icon_manager import IconManager, EXTENSION_ICON_MAP, FOLDER_ICON_MAP
           from src.utils.icon_manager import get_file_icon_name, get_folder_icon_name
-          print('utils.theme_loader — OK')
-          print('utils.recent_files — OK')
-          print('utils.icon_manager — OK')
-          "
-
-      - name: Test utils.styles imports
-        run: |
-          python -c "
           from src.utils.styles import apply_global_styles, make_round_btn, make_icon_btn, make_action_row
-          print('utils.styles — OK')
-          "
-
-      - name: Test utils.shortcuts imports
-        run: |
-          python -c "
           from src.utils.shortcuts import ShortcutManager
-          print('utils.shortcuts — OK')
+          print('All utils imports — OK')
           "
 
       - name: Test core imports
@@ -173,13 +163,10 @@ jobs:
           from src.core.extension_manager import ExtensionManager
           from src.core.updater import Updater
           from src.core.git_installer import GitInstaller
-          print('core.syntax_highlighter — OK')
-          print('core.extension_manager — OK')
-          print('core.updater — OK')
-          print('core.git_installer — OK')
+          print('All core imports — OK')
           "
 
-      - name: Test assets.icons imports
+      - name: Test assets imports
         run: |
           python -c "
           from assets.icons.icons import ICONS
@@ -197,8 +184,7 @@ jobs:
       - name: Test theme files
         run: |
           python -c "
-          import json
-          import os
+          import json, os
 
           for theme in ['dark', 'light']:
               path = f'assets/themes/{theme}.json'
@@ -207,25 +193,17 @@ jobs:
                   data = json.load(f)
               assert 'colors' in data, f'{theme}.json missing colors'
               assert 'syntax' in data, f'{theme}.json missing syntax'
-
-              colors = data['colors']
               required_colors = ['bg_primary', 'bg_secondary', 'fg_primary',
                                  'accent', 'editor_bg', 'editor_fg',
                                  'sidebar_bg', 'terminal_bg', 'terminal_fg']
-              missing = [c for c in required_colors if c not in colors]
+              missing = [c for c in required_colors if c not in data['colors']]
               assert not missing, f'{theme}.json missing colors: {missing}'
-
-              syntax = data['syntax']
               required_syntax = ['keyword', 'string', 'comment', 'number', 'function']
-              missing = [s for s in required_syntax if s not in syntax]
+              missing = [s for s in required_syntax if s not in data['syntax']]
               assert not missing, f'{theme}.json missing syntax: {missing}'
-
-              print(f'themes/{theme}.json — {len(colors)} colors, {len(syntax)} syntax — OK')
+              print(f'themes/{theme}.json — OK')
           "
 
-  # ─────────────────────────────────────────
-  # LOGIC TESTS — core functionality
-  # ─────────────────────────────────────────
   logic:
     name: "Logic Tests"
     runs-on: ubuntu-latest
@@ -257,21 +235,18 @@ jobs:
           python -c "
           from src.utils.theme_loader import ThemeLoader
 
-          # Dark theme
           dark = ThemeLoader('dark')
-          assert dark.colors['bg_primary'], 'Dark bg_primary empty'
-          assert dark.syntax['keyword'], 'Dark keyword empty'
+          assert dark.colors['bg_primary']
+          assert dark.syntax['keyword']
           print(f'ThemeLoader dark — {len(dark.colors)} colors — OK')
 
-          # Light theme
           light = ThemeLoader('light')
-          assert light.colors['bg_primary'], 'Light bg_primary empty'
-          assert light.colors['bg_primary'] != dark.colors['bg_primary'], 'Dark and light same bg'
+          assert light.colors['bg_primary']
+          assert light.colors['bg_primary'] != dark.colors['bg_primary']
           print(f'ThemeLoader light — {len(light.colors)} colors — OK')
 
-          # Fallback theme
           fallback = ThemeLoader('nonexistent')
-          assert fallback.colors['bg_primary'], 'Fallback bg_primary empty'
+          assert fallback.colors['bg_primary']
           print('ThemeLoader fallback — OK')
           "
 
@@ -282,100 +257,60 @@ jobs:
           from src.utils.recent_files import RecentFilesManager
 
           mgr = RecentFilesManager()
-
-          # Create temp file
           with tempfile.NamedTemporaryFile(delete=False, suffix='.py') as f:
               f.write(b'# test')
               path = f.name
-
           try:
               mgr.add(path)
               files = mgr.get_all()
-              assert os.path.abspath(path) in files, 'File not in recent list'
-              print(f'RecentFiles add — OK ({len(files)} files)')
-
+              assert os.path.abspath(path) in files
+              print(f'RecentFiles add — OK')
               mgr.clear()
-              assert len(mgr.get_all()) == 0, 'Clear did not empty list'
+              assert len(mgr.get_all()) == 0
               print('RecentFiles clear — OK')
           finally:
               os.unlink(path)
           "
 
-      - name: Test SyntaxHighlighter language detection
+      - name: Test SyntaxHighlighter
         run: |
           python -c "
           from src.core.syntax_highlighter import SyntaxHighlighter
 
           h = SyntaxHighlighter.__new__(SyntaxHighlighter)
-
           tests = {
-              'test.py': 'python',
-              'test.js': 'javascript',
-              'test.ts': 'javascript',
-              'test.jsx': 'javascript',
-              'test.tsx': 'javascript',
-              'test.html': 'html',
-              'test.htm': 'html',
-              'test.css': 'css',
-              'test.json': 'json',
-              'test.txt': 'text',
-              'test.unknown': 'text',
-              None: 'python',
+              'test.py': 'python', 'test.js': 'javascript',
+              'test.ts': 'javascript', 'test.html': 'html',
+              'test.css': 'css', 'test.json': 'json',
+              'test.txt': 'text', None: 'python',
           }
-
-          for filepath, expected in tests.items():
-              h.filepath = filepath
+          for fp, expected in tests.items():
+              h.filepath = fp
               result = h._detect_language()
-              assert result == expected, f'{filepath}: expected {expected}, got {result}'
-              print(f'  {filepath or \"None\"} -> {result} — OK')
-
+              assert result == expected, f'{fp}: expected {expected}, got {result}'
           print('SyntaxHighlighter detection — OK')
           "
 
       - name: Test IconManager
         run: |
           python -c "
-          from src.utils.icon_manager import (
-              IconManager, get_file_icon_name, get_folder_icon_name,
-              EXTENSION_ICON_MAP, FOLDER_ICON_MAP,
-          )
+          from src.utils.icon_manager import get_file_icon_name, get_folder_icon_name, IconManager
 
-          # Extension mapping
-          tests = {
-              'main.py': 'file_python',
-              'app.js': 'file_javascript',
-              'index.html': 'file_html',
-              'style.css': 'file_css',
-              'data.json': 'file_json',
-              'README.md': 'file_markdown',
-              'script.sh': 'file_shell',
-              'main.go': 'file_go',
-              'lib.rs': 'file_rust',
-              'unknown.xyz': 'file',
-          }
-
-          for filename, expected in tests.items():
-              result = get_file_icon_name(filename)
-              assert result == expected, f'{filename}: expected {expected}, got {result}'
-              print(f'  {filename} -> {result} — OK')
-
-          # Folder mapping
+          assert get_file_icon_name('main.py') == 'file_python'
+          assert get_file_icon_name('app.js') == 'file_javascript'
+          assert get_file_icon_name('unknown.xyz') == 'file'
           assert get_folder_icon_name('src') == 'folder_src'
           assert get_folder_icon_name('.git') == 'folder_git'
           assert get_folder_icon_name('random') == 'folder_closed'
-          assert get_folder_icon_name('random', is_open=True) == 'folder_open'
-          print('Folder icon mapping — OK')
+          assert get_folder_icon_name('random', True) == 'folder_open'
 
-          # Text fallbacks
           mgr = IconManager()
-          text = mgr.get_text('file_python')
-          assert text == '[Py]', f'Expected [Py], got {text}'
-          text = mgr.get_text('folder_closed')
-          assert text == '[+]', f'Expected [+], got {text}'
-          print('Icon text fallbacks — OK')
+          assert mgr.get_text('file_python') == '[Py]'
+          assert mgr.get_text('folder_closed') == '[+]'
+          print('IconManager — OK')
           "
 
-      - name: Test ExtensionManager format helpers
+      - name: Test ExtensionManager helpers
         run: |
           python -c "
           from src.core.extension_manager import ExtensionManager
@@ -384,10 +319,6 @@ jobs:
           assert ExtensionManager.format_installs(1500) == '1.5K'
           assert ExtensionManager.format_installs(2500000) == '2.5M'
           print('ExtensionManager.format_installs — OK')
-
-          r = ExtensionManager.format_rating(4.5)
-          assert '4.5' in r
-          print('ExtensionManager.format_rating — OK')
           "
 
       - name: Test Updater version comparison
@@ -396,13 +327,10 @@ jobs:
           from src.core.updater import Updater
 
           u = Updater.__new__(Updater)
-
           assert u._is_newer('1.0.5', '1.0.4') == True
           assert u._is_newer('1.0.4', '1.0.4') == False
           assert u._is_newer('1.0.3', '1.0.4') == False
           assert u._is_newer('2.0.0', '1.9.9') == True
-          assert u._is_newer('1.1.0', '1.0.9') == True
-          assert u._is_newer('1.0.0', '1.0.0.1') == False
           assert u._is_newer('1.0.0.2', '1.0.0.1') == True
           print('Updater._is_newer — OK')
           "
@@ -410,23 +338,14 @@ jobs:
       - name: Test GitInstaller detection
         run: |
           python -c "
-          import shutil
-
-          git_path = shutil.which('git')
-          if git_path:
-              print(f'Git found at: {git_path} — OK')
-          else:
-              print('Git not found (expected in some CI) — OK')
-
-          # Test platform detection
           from src.core.git_installer import GitInstaller
-          gi = GitInstaller.__new__(GitInstaller)
 
+          gi = GitInstaller.__new__(GitInstaller)
           key = gi._get_platform_key()
           name = gi._get_platform_name()
-          assert key in ('win32', 'darwin', 'linux'), f'Unknown platform: {key}'
-          assert name in ('Windows', 'macOS', 'Linux'), f'Unknown name: {name}'
-          print(f'Platform: {name} ({key}) — OK')
+          assert key in ('win32', 'darwin', 'linux')
+          assert name in ('Windows', 'macOS', 'Linux')
+          print(f'GitInstaller platform: {name} ({key}) — OK')
           "
 
       - name: Test config defaults
@@ -434,7 +353,7 @@ jobs:
           python -c "
           from src.config import DEFAULT_SETTINGS
 
-          required_keys = [
+          required = [
               'theme', 'font_family', 'font_size', 'tab_size',
               'show_line_numbers', 'word_wrap', 'auto_indent',
               'auto_save', 'auto_check_updates', 'window_width',
@@ -443,39 +362,15 @@ jobs:
               'highlight_current_line', 'show_whitespace', 'cursor_blink',
               'minimap_enabled', 'suppress_git_prompt',
           ]
-
-          missing = [k for k in required_keys if k not in DEFAULT_SETTINGS]
-          assert not missing, f'Missing default settings: {missing}'
-          print(f'DEFAULT_SETTINGS — {len(DEFAULT_SETTINGS)} keys — OK')
-
-          # Type checks
+          missing = [k for k in required if k not in DEFAULT_SETTINGS]
+          assert not missing, f'Missing: {missing}'
           assert isinstance(DEFAULT_SETTINGS['theme'], str)
           assert isinstance(DEFAULT_SETTINGS['font_size'], int)
           assert isinstance(DEFAULT_SETTINGS['auto_indent'], bool)
           assert isinstance(DEFAULT_SETTINGS['installed_extensions'], list)
-          print('Settings type checks — OK')
+          print(f'DEFAULT_SETTINGS — {len(DEFAULT_SETTINGS)} keys — OK')
           "
 
-      - name: Test supported extensions mapping
-        run: |
-          python -c "
-          from src.config import SUPPORTED_EXTENSIONS
-
-          assert '.py' in SUPPORTED_EXTENSIONS
-          assert SUPPORTED_EXTENSIONS['.py'] == 'Python'
-          assert '.js' in SUPPORTED_EXTENSIONS
-          assert '.html' in SUPPORTED_EXTENSIONS
-          assert '.css' in SUPPORTED_EXTENSIONS
-          assert '.json' in SUPPORTED_EXTENSIONS
-          assert '.ts' in SUPPORTED_EXTENSIONS
-          assert '.go' in SUPPORTED_EXTENSIONS
-          assert '.rs' in SUPPORTED_EXTENSIONS
-          print(f'SUPPORTED_EXTENSIONS — {len(SUPPORTED_EXTENSIONS)} types — OK')
-          "
-
-  # ─────────────────────────────────────────
-  # UNIT TESTS — pytest
-  # ─────────────────────────────────────────
   unit:
     name: "Unit Tests"
     runs-on: ubuntu-latest
@@ -494,7 +389,7 @@ jobs:
       - name: Install system deps
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y python3-tk python3-dev tk-dev
+          sudo apt-get install -y python3-tk python3-dev tk-dev xvfb
 
       - name: Install Python deps
         run: |
@@ -502,15 +397,47 @@ jobs:
           pip install -r requirements.txt
           pip install pillow pytest
 
-      - name: Run pytest
-        run: python -m pytest tests/ -v --tb=short || echo "No pytest tests found — OK"
+      - name: Run unit tests
+        run: |
+          xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24" \
+            python -m pytest tests/test_config.py tests/test_theme_loader.py tests/test_icons.py \
+            tests/test_updater.py tests/test_syntax.py tests/test_extensions.py \
+            tests/test_recent_files.py tests/test_git_installer.py \
+            -v --tb=short
 
-      - name: Run unittest
-        run: python -m unittest discover tests/ -v || echo "No unittest tests found — OK"
+  gui:
+    name: "GUI Tests"
+    runs-on: ubuntu-latest
+    needs: imports
 
-  # ─────────────────────────────────────────
-  # SPEC CHECK — PyInstaller spec valid
-  # ─────────────────────────────────────────
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install system deps
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y \
+            python3-tk python3-dev tk-dev \
+            xvfb x11-utils
+
+      - name: Install Python deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pillow pytest
+
+      - name: Run GUI tests with Xvfb
+        run: |
+          xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24" \
+            python -m pytest tests/test_gui.py -v --tb=short
+
   spec:
     name: "Spec Validation"
     runs-on: ubuntu-latest
@@ -540,7 +467,6 @@ jobs:
           with open('OmniIDE.spec', 'r') as f:
               content = f.read()
 
-          # Check it's valid Python
           try:
               ast.parse(content)
               print('OmniIDE.spec — valid Python syntax — OK')
@@ -548,58 +474,38 @@ jobs:
               print(f'OmniIDE.spec — SYNTAX ERROR: {e}')
               exit(1)
 
-          # Check required hidden imports
           required = [
-              'src.app',
-              'src.config',
-              'src.core.editor',
-              'src.core.tab_manager',
-              'src.core.syntax_highlighter',
-              'src.core.file_manager',
-              'src.core.terminal',
-              'src.core.search',
-              'src.core.git_manager',
-              'src.core.git_installer',
-              'src.core.extension_manager',
-              'src.core.command_palette',
+              'src.app', 'src.config',
+              'src.core.editor', 'src.core.tab_manager',
+              'src.core.syntax_highlighter', 'src.core.file_manager',
+              'src.core.terminal', 'src.core.search',
+              'src.core.git_manager', 'src.core.git_installer',
+              'src.core.extension_manager', 'src.core.command_palette',
               'src.core.updater',
-              'src.ui.menubar',
-              'src.ui.sidebar',
-              'src.ui.statusbar',
-              'src.ui.toolbar',
-              'src.ui.file_tree',
-              'src.ui.welcome',
-              'src.ui.splash',
-              'src.ui.extensions_panel',
+              'src.ui.menubar', 'src.ui.sidebar',
+              'src.ui.statusbar', 'src.ui.toolbar',
+              'src.ui.file_tree', 'src.ui.welcome',
+              'src.ui.splash', 'src.ui.extensions_panel',
               'src.ui.settings_panel',
-              'src.utils.theme_loader',
-              'src.utils.recent_files',
-              'src.utils.shortcuts',
-              'src.utils.styles',
+              'src.utils.theme_loader', 'src.utils.recent_files',
+              'src.utils.shortcuts', 'src.utils.styles',
               'src.utils.icon_manager',
           ]
-
           missing = [m for m in required if m not in content]
           if missing:
-              print(f'WARNING: These modules may be missing from spec hidden_imports:')
+              print(f'WARNING: Missing from hidden_imports:')
               for m in missing:
                   print(f'  - {m}')
+              exit(1)
           else:
-              print(f'All {len(required)} required modules in hidden_imports — OK')
+              print(f'All {len(required)} modules in hidden_imports — OK')
 
-          # Check data files
           assert 'assets' in content, 'assets not in datas'
           assert 'src' in content, 'src not in datas'
-          print('Data files configured — OK')
-
-          # Check entry point
-          assert 'run.py' in content, 'run.py not found as entry point'
-          print('Entry point: run.py — OK')
+          assert 'run.py' in content, 'run.py not found'
+          print('Spec validation — OK')
           "
 
-  # ─────────────────────────────────────────
-  # DOCS CHECK
-  # ─────────────────────────────────────────
   docs:
     name: "Docs Validation"
     runs-on: ubuntu-latest
@@ -637,14 +543,13 @@ jobs:
       - name: Validate HTML
         run: |
           if [ -f "docs/index.html" ]; then
-            # Basic checks
-            grep -q "<html" docs/index.html && echo "HTML tag — OK" || echo "WARNING: no <html> tag"
-            grep -q "</html>" docs/index.html && echo "Closing HTML — OK" || echo "WARNING: no </html>"
-            grep -q "<head" docs/index.html && echo "HEAD tag — OK" || echo "WARNING: no <head>"
-            grep -q "<body" docs/index.html && echo "BODY tag — OK" || echo "WARNING: no <body>"
-            grep -q "favicon.svg" docs/index.html && echo "Favicon ref — OK" || echo "WARNING: no favicon ref"
-            grep -q "style.css" docs/index.html && echo "CSS ref — OK" || echo "WARNING: no CSS ref"
-            grep -q "script.js" docs/index.html && echo "JS ref — OK" || echo "WARNING: no JS ref"
+            grep -q "<html" docs/index.html && echo "HTML tag — OK" || echo "WARNING: no html tag"
+            grep -q "</html>" docs/index.html && echo "Closing HTML — OK" || echo "WARNING: no closing html"
+            grep -q "<head" docs/index.html && echo "HEAD tag — OK" || echo "WARNING: no head"
+            grep -q "<body" docs/index.html && echo "BODY tag — OK" || echo "WARNING: no body"
+            grep -q "favicon.svg" docs/index.html && echo "Favicon — OK" || echo "WARNING: no favicon"
+            grep -q "style.css" docs/index.html && echo "CSS ref — OK" || echo "WARNING: no CSS"
+            grep -q "script.js" docs/index.html && echo "JS ref — OK" || echo "WARNING: no JS"
           fi
 
       - name: Check README badges
@@ -652,22 +557,18 @@ jobs:
           if grep -q "komarev.com/ghpvc" README.md; then
             echo "View counter badge — OK"
           else
-            echo "WARNING: No view counter badge in README"
+            echo "WARNING: No view counter badge"
           fi
-
           if grep -q "img.shields.io" README.md; then
             echo "Shield badges — OK"
           else
-            echo "WARNING: No shield badges in README"
+            echo "WARNING: No shield badges"
           fi
 
-  # ─────────────────────────────────────────
-  # SUMMARY
-  # ─────────────────────────────────────────
   summary:
     name: "Test Summary"
     runs-on: ubuntu-latest
-    needs: [structure, imports, logic, unit, spec, docs]
+    needs: [structure, imports, logic, unit, gui, spec, docs]
     if: always()
 
     steps:
@@ -681,6 +582,7 @@ jobs:
           echo "| Import Check | ${{ needs.imports.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Logic Tests | ${{ needs.logic.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Unit Tests | ${{ needs.unit.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| GUI Tests | ${{ needs.gui.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Spec Validation | ${{ needs.spec.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Docs Validation | ${{ needs.docs.result }} |" >> $GITHUB_STEP_SUMMARY
 
@@ -690,6 +592,7 @@ jobs:
           needs.imports.result == 'failure' ||
           needs.logic.result == 'failure' ||
           needs.unit.result == 'failure' ||
+          needs.gui.result == 'failure' ||
           needs.spec.result == 'failure'
         run: |
           echo "One or more test jobs failed!"
@@ -701,5 +604,6 @@ jobs:
           needs.imports.result == 'success' &&
           needs.logic.result == 'success' &&
           needs.unit.result == 'success' &&
+          needs.gui.result == 'success' &&
           needs.spec.result == 'success'
         run: echo "All tests passed!"
