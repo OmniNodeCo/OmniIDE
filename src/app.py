@@ -1,118 +1,107 @@
-"""Main application — v1.0.4."""
+"""Main application window — PyQt6."""
 
-import tkinter as tk
-import tkinter.ttk as tkttk
-import ttkbootstrap as ttk
-from ttkbootstrap.constants import *
 import json
 import os
 
+from PyQt6.QtWidgets import (
+    QMainWindow, QSplitter, QTabWidget, QWidget, QVBoxLayout,
+    QHBoxLayout, QFileDialog, QMessageBox, QApplication,
+)
+from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtGui import QFont, QFontDatabase, QIcon
+
 from src.config import (
     APP_NAME, APP_VERSION, APP_AUTHOR,
-    DEFAULT_SETTINGS, SETTINGS_PATH
+    DEFAULT_SETTINGS, SETTINGS_PATH, ASSETS_DIR,
 )
+from src.utils.theme_loader import ThemeLoader
+from src.utils.recent_files import RecentFilesManager
+from src.core.file_manager import FileManager
+from src.core.git_manager import GitManager
+from src.core.git_installer import GitInstaller
+from src.core.extension_manager import ExtensionManager
+from src.core.updater import Updater
+from src.ui.editor_widget import EditorTabWidget
+from src.ui.sidebar import Sidebar
+from src.ui.terminal_widget import TerminalWidget
+from src.ui.toolbar import Toolbar
+from src.ui.statusbar import StatusBar
+from src.ui.menubar import MenuBarBuilder
+from src.ui.command_palette import CommandPaletteDialog
+from src.ui.settings_dialog import SettingsDialog
+from src.ui.splash import SplashScreen
+from src.ui.theme_stylesheet import build_stylesheet
 
 
-class OmniIDEApp:
-    """Main OmniIDE Application."""
+class OmniIDEApp(QMainWindow):
+    """Main IDE window."""
 
     def __init__(self):
+        super().__init__()
         self.settings = self._load_settings()
-        theme_name = "darkly" if self.settings["theme"] == "dark" else "cosmo"
+        self.current_project_path = None
 
-        self.root = ttk.Window(
-            title=f"{APP_NAME} v{APP_VERSION} — {APP_AUTHOR}",
-            themename=theme_name,
-            size=(self.settings["window_width"], self.settings["window_height"]),
-            minsize=(800, 500),
-        )
+        # Show splash
+        self.splash = SplashScreen()
+        self.splash.show()
+        self.splash.set_status("Loading theme...")
+        QApplication.processEvents()
 
-        self.root.withdraw()
-
-        from src.ui.splash import SplashScreen
-        self.splash = SplashScreen(self.root)
-        self.splash.update_status("Loading modules...")
-
-        from src.utils.theme_loader import ThemeLoader
-        from src.utils.recent_files import RecentFilesManager
-        from src.utils.shortcuts import ShortcutManager
-        from src.utils.styles import apply_global_styles
-        from src.core.file_manager import FileManager
-        from src.core.tab_manager import TabManager
-        from src.core.terminal import Terminal
-        from src.core.search import SearchBar
-        from src.core.git_manager import GitManager
-        from src.core.git_installer import GitInstaller
-        from src.core.extension_manager import ExtensionManager
-        from src.core.command_palette import CommandPalette
-        from src.core.updater import Updater
-        from src.ui.menubar import MenuBar
-        from src.ui.sidebar import Sidebar
-        from src.ui.statusbar import StatusBar
-        from src.ui.toolbar import Toolbar
-        from src.ui.welcome import WelcomeTab
-        from src.ui.settings_panel import SettingsPanel
-
-        self._WelcomeTab = WelcomeTab
-
-        self.splash.update_status("Loading theme...")
-        self.splash.set_progress(10)
-
+        # Theme
         self.theme_loader = ThemeLoader(self.settings["theme"])
         self.colors = self.theme_loader.colors
         self.syntax_colors = self.theme_loader.syntax
 
-        self.splash.update_status("Initializing managers...")
-        self.splash.set_progress(25)
+        self.splash.set_progress(15)
+        self.splash.set_status("Initializing managers...")
+        QApplication.processEvents()
 
+        # Managers
         self.recent_files_manager = RecentFilesManager()
         self.file_manager = FileManager(self)
         self.git_manager = GitManager(self)
         self.git_installer = GitInstaller(self)
         self.extension_manager = ExtensionManager(self)
         self.updater = Updater(self)
-        self.settings_panel = SettingsPanel(self)
-        self.current_project_path = None
 
-        self.splash.update_status("Building interface...")
-        self.splash.set_progress(45)
+        self.splash.set_progress(35)
+        self.splash.set_status("Building interface...")
+        QApplication.processEvents()
 
-        self._build_ui(
-            Toolbar, Sidebar, TabManager,
-            Terminal, SearchBar, StatusBar, MenuBar,
-        )
+        # Window setup
+        self.setWindowTitle(f"{APP_NAME} v{APP_VERSION} — {APP_AUTHOR}")
+        self.resize(self.settings["window_width"], self.settings["window_height"])
+        self.setMinimumSize(800, 500)
 
-        self.splash.update_status("Initializing command palette...")
-        self.splash.set_progress(60)
+        icon_path = os.path.join(ASSETS_DIR, "icon.png")
+        if os.path.exists(icon_path):
+            self.setWindowIcon(QIcon(icon_path))
 
-        self.command_palette = CommandPalette(self)
+        self._build_ui()
 
-        self.splash.update_status("Applying styles...")
-        self.splash.set_progress(75)
+        self.splash.set_progress(65)
+        self.splash.set_status("Applying styles...")
+        QApplication.processEvents()
 
-        apply_global_styles(self)
+        self._apply_theme()
 
-        self.splash.update_status("Binding shortcuts...")
-        self.splash.set_progress(88)
+        self.splash.set_progress(85)
+        self.splash.set_status("Setting up shortcuts...")
+        QApplication.processEvents()
 
-        self.shortcut_manager = ShortcutManager(self)
-        self.shortcut_manager.bind_all()
+        self._setup_shortcuts()
 
-        self.splash.update_status("Ready!")
         self.splash.set_progress(100)
+        self.splash.set_status("Ready!")
+        QApplication.processEvents()
 
-        self.root.after(600, self._finish_startup)
+        # Close splash after delay
+        QTimer.singleShot(500, self._finish_startup)
 
     def _finish_startup(self):
         self.splash.close()
-        self.root.deiconify()
-        self._show_welcome()
-        self.root.focus_force()
-
-        # Check for Git installation
-        self.root.after(500, self.git_installer.check_and_prompt)
-
-        # Auto check for updates
+        self.editor_tabs.add_welcome_tab()
+        self.git_installer.check_and_prompt()
         self.updater.check_on_startup()
 
     def _load_settings(self):
@@ -132,96 +121,158 @@ class OmniIDEApp:
         except Exception:
             pass
 
-    def _build_ui(
-        self, Toolbar, Sidebar, TabManager,
-        Terminal, SearchBar, StatusBar, MenuBar,
-    ):
-        self.root.columnconfigure(0, weight=1)
-        self.root.rowconfigure(2, weight=1)
+    def _build_ui(self):
+        # Central widget
+        central = QWidget()
+        self.setCentralWidget(central)
+        layout = QVBoxLayout(central)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
 
-        self.toolbar = Toolbar(self.root, self)
-        self.toolbar.frame.grid(row=0, column=0, sticky="ew")
+        # Toolbar
+        self.toolbar = Toolbar(self)
+        layout.addWidget(self.toolbar)
 
-        self.search_bar = SearchBar(self.root, self)
-        self.search_bar.frame.grid(row=1, column=0, sticky="ew")
-        self.search_bar.hide()
+        # Main splitter (sidebar | editor+terminal)
+        self.main_splitter = QSplitter(Qt.Orientation.Horizontal)
+        layout.addWidget(self.main_splitter, 1)
 
-        self.main_pane = tkttk.PanedWindow(self.root, orient=tk.HORIZONTAL)
-        self.main_pane.grid(row=2, column=0, sticky="nsew")
+        # Sidebar
+        self.sidebar = Sidebar(self)
+        self.main_splitter.addWidget(self.sidebar)
 
-        self.sidebar = Sidebar(self.main_pane, self)
-        self.main_pane.add(self.sidebar.frame, weight=0)
+        # Right side (editor + terminal)
+        right_widget = QWidget()
+        right_layout = QVBoxLayout(right_widget)
+        right_layout.setContentsMargins(0, 0, 0, 0)
+        right_layout.setSpacing(0)
 
-        self.right_pane = tkttk.PanedWindow(self.main_pane, orient=tk.VERTICAL)
-        self.main_pane.add(self.right_pane, weight=1)
+        # Editor/terminal splitter
+        self.editor_terminal_splitter = QSplitter(Qt.Orientation.Vertical)
+        right_layout.addWidget(self.editor_terminal_splitter)
 
-        self.tab_manager = TabManager(self.right_pane, self)
-        self.right_pane.add(self.tab_manager.frame, weight=1)
+        # Editor tabs
+        self.editor_tabs = EditorTabWidget(self)
+        self.editor_terminal_splitter.addWidget(self.editor_tabs)
 
-        self.terminal = Terminal(self.right_pane, self)
-        self.right_pane.add(self.terminal.frame, weight=0)
+        # Terminal
+        self.terminal = TerminalWidget(self)
+        self.editor_terminal_splitter.addWidget(self.terminal)
 
-        self.statusbar = StatusBar(self.root, self)
-        self.statusbar.frame.grid(row=3, column=0, sticky="ew")
+        self.editor_terminal_splitter.setSizes([500, 200])
 
-        self.menubar = MenuBar(self.root, self)
+        self.main_splitter.addWidget(right_widget)
+        self.main_splitter.setSizes([self.settings["sidebar_width"], 900])
+
+        # Status bar
+        self.statusbar = StatusBar(self)
+        layout.addWidget(self.statusbar)
+
+        # Menu bar
+        MenuBarBuilder(self)
+
+    def _apply_theme(self):
+        stylesheet = build_stylesheet(self.colors)
+        self.setStyleSheet(stylesheet)
 
     def switch_theme(self):
-        from src.utils.styles import apply_global_styles
-
         if self.settings["theme"] == "dark":
             self.settings["theme"] = "light"
-            self.root.style.theme_use("cosmo")
         else:
             self.settings["theme"] = "dark"
-            self.root.style.theme_use("darkly")
 
-        from src.utils.theme_loader import ThemeLoader
         self.theme_loader = ThemeLoader(self.settings["theme"])
         self.colors = self.theme_loader.colors
         self.syntax_colors = self.theme_loader.syntax
-        apply_global_styles(self)
-        self.tab_manager.refresh_all_highlighting()
+        self._apply_theme()
+        self.editor_tabs.refresh_all()
         self.save_settings()
         self.set_status(f"Theme: {self.settings['theme'].title()}")
 
-    def _show_welcome(self):
-        welcome = self._WelcomeTab(self)
-        welcome.show()
+    def _setup_shortcuts(self):
+        from PyQt6.QtGui import QShortcut, QKeySequence
+
+        shortcuts = {
+            "Ctrl+N": self.file_manager.new_file,
+            "Ctrl+O": self.file_manager.open_file,
+            "Ctrl+S": self.file_manager.save_file,
+            "Ctrl+Shift+S": self.file_manager.save_file_as,
+            "Ctrl+W": self.editor_tabs.close_current_tab,
+            "Ctrl+F": self.toggle_search,
+            "Ctrl+B": self.toggle_sidebar,
+            "Ctrl+`": self.toggle_terminal,
+            "Ctrl+Shift+P": self.open_command_palette,
+            "Ctrl+,": self.open_settings,
+            "Ctrl+G": self.go_to_line,
+            "Ctrl+=": lambda: self._zoom(1),
+            "Ctrl+-": lambda: self._zoom(-1),
+            "Ctrl+0": lambda: self._zoom(0),
+        }
+
+        for key, func in shortcuts.items():
+            shortcut = QShortcut(QKeySequence(key), self)
+            shortcut.activated.connect(func)
 
     def set_status(self, text):
         self.statusbar.set_text(text)
 
     def toggle_sidebar(self):
-        self.sidebar.toggle()
+        self.sidebar.setVisible(not self.sidebar.isVisible())
 
     def toggle_terminal(self):
-        self.terminal.toggle()
+        self.terminal.setVisible(not self.terminal.isVisible())
 
     def toggle_search(self):
-        self.search_bar.toggle()
+        self.editor_tabs.toggle_search()
 
-    def toggle_command_palette(self):
-        self.command_palette.toggle()
+    def open_command_palette(self):
+        dialog = CommandPaletteDialog(self)
+        dialog.exec()
 
     def open_settings(self):
-        self.settings_panel.show()
+        dialog = SettingsDialog(self)
+        dialog.exec()
+
+    def go_to_line(self):
+        from PyQt6.QtWidgets import QInputDialog
+        editor = self.editor_tabs.get_current_editor()
+        if not editor:
+            return
+        line, ok = QInputDialog.getInt(self, "Go to Line", "Line:", 1, 1, 999999)
+        if ok:
+            cursor = editor.textCursor()
+            block = editor.document().findBlockByLineNumber(line - 1)
+            cursor.setPosition(block.position())
+            editor.setTextCursor(cursor)
+            editor.centerCursor()
+            self.set_status(f"Line {line}")
+
+    def open_project(self, path=None):
+        if path is None:
+            path = QFileDialog.getExistingDirectory(self, "Open Project Folder")
+        if path and os.path.isdir(path):
+            self.current_project_path = path
+            self.sidebar.file_tree.load_directory(path)
+            self.setWindowTitle(f"{APP_NAME} — {os.path.basename(path)} — {APP_AUTHOR}")
+            self.set_status(f"Project: {path}")
+            self.git_manager.detect_repo(path)
 
     def check_for_updates(self):
         self.updater.check_now(silent=False)
 
-    def open_project(self, path=None):
-        if path is None:
-            from tkinter import filedialog
-            path = filedialog.askdirectory(title="Open Project Folder")
-        if path and os.path.isdir(path):
-            self.current_project_path = path
-            self.sidebar.file_tree.load_directory(path)
-            self.root.title(
-                f"{APP_NAME} — {os.path.basename(path)} — {APP_AUTHOR}"
-            )
-            self.set_status(f"Project: {path}")
-            self.git_manager.detect_repo(path)
+    def _zoom(self, direction):
+        if direction == 0:
+            self.settings["font_size"] = 13
+        elif direction > 0:
+            self.settings["font_size"] = min(32, self.settings["font_size"] + 1)
+        else:
+            self.settings["font_size"] = max(8, self.settings["font_size"] - 1)
 
-    def run(self):
-        self.root.mainloop()
+        self.editor_tabs.apply_font()
+        self.save_settings()
+        self.set_status(f"Font size: {self.settings['font_size']}")
+
+    def closeEvent(self, event):
+        self.terminal.stop_shell()
+        self.save_settings()
+        event.accept()

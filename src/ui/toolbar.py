@@ -1,57 +1,46 @@
-"""Top toolbar — VS Code style with round icon+text buttons."""
+"""Toolbar — PyQt6."""
 
-import tkinter as tk
-import ttkbootstrap as ttk
-from ttkbootstrap.constants import *
-
-from src.utils.icon_manager import IconManager
-from src.utils.styles import make_round_btn, make_icon_btn
+from PyQt6.QtWidgets import QWidget, QHBoxLayout, QPushButton, QFrame
 
 
-class Toolbar:
+class Toolbar(QWidget):
     """Top action toolbar."""
 
-    def __init__(self, parent, app):
+    def __init__(self, app):
+        super().__init__()
         self.app = app
-        self.icon_mgr = IconManager()
-        self._icon_refs = []
 
-        self.frame = ttk.Frame(parent, padding=(8, 4, 8, 4))
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(8, 4, 8, 4)
+        layout.setSpacing(4)
 
-        # File group
-        self._btn("new_file", "New", app.file_manager.new_file, "info")
-        self._btn("open_file", "Open", app.file_manager.open_file, "info")
-        self._btn("save", "Save", app.file_manager.save_file, "success")
+        buttons = [
+            ("New", app.file_manager.new_file, None),
+            ("Open", app.file_manager.open_file, None),
+            ("Save", app.file_manager.save_file, "primary"),
+            (None, None, None),
+            ("Find", lambda: app.toggle_search(), None),
+            (None, None, None),
+            ("Theme", app.switch_theme, None),
+            ("Settings", lambda: app.open_settings(), None),
+        ]
 
-        self._sep()
+        for text, callback, css_class in buttons:
+            if text is None:
+                sep = QFrame()
+                sep.setFrameShape(QFrame.Shape.VLine)
+                sep.setFixedWidth(1)
+                sep.setStyleSheet(f"background-color: {app.colors['border']};")
+                layout.addWidget(sep)
+            else:
+                btn = QPushButton(text)
+                if css_class:
+                    btn.setProperty("cssClass", css_class)
+                btn.clicked.connect(callback)
+                layout.addWidget(btn)
 
-        # Edit
-        self._btn("search", "Find", app.toggle_search, "warning")
+        layout.addStretch()
 
-        self._sep()
-
-        # View
-        self._btn("theme", "Theme", app.switch_theme, "secondary")
-        self._btn("settings", "Settings", lambda: app.open_settings(), "secondary")
-
-        # Right-aligned
-        spacer = ttk.Frame(self.frame)
-        spacer.pack(side=LEFT, fill=X, expand=True)
-
-        # Command palette button on the right
-        self._btn("terminal", "Palette", lambda: app.toggle_command_palette(), "info", side=RIGHT)
-
-    def _btn(self, icon_name, text, command, style, side=LEFT):
-        icon = self.icon_mgr.get(icon_name, 14)
-        self._icon_refs.append(icon)
-
-        btn = make_round_btn(
-            self.frame, text, icon, command, style,
-            self._icon_refs, size="small",
-        )
-        btn.pack(side=side, padx=2)
-
-    def _sep(self):
-        ttk.Separator(self.frame, orient=VERTICAL).pack(
-            side=LEFT, fill=tk.Y, padx=8, pady=3
-        )
+        palette_btn = QPushButton("Palette")
+        palette_btn.clicked.connect(lambda: app.open_command_palette())
+        layout.addWidget(palette_btn)

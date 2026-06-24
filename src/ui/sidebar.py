@@ -1,257 +1,409 @@
-"""Sidebar — VS Code style with tabbed panels, round buttons, organized sections."""
+"""Sidebar — PyQt6 with tabbed panels."""
 
-import tkinter as tk
-import ttkbootstrap as ttk
-from ttkbootstrap.constants import *
+import os
 
-from src.ui.file_tree import FileTree
-from src.ui.extensions_panel import ExtensionsPanel
-from src.utils.icon_manager import IconManager
-from src.utils.styles import make_round_btn, make_icon_btn, make_action_row
+from PyQt6.QtWidgets import (
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
+    QFrame, QTreeView, QFileSystemModel, QScrollArea,
+    QStackedWidget, QLineEdit, QMessageBox,
+)
+from PyQt6.QtCore import Qt, QDir, QModelIndex
+from PyQt6.QtGui import QFont
+
+from src.core.extension_manager import ExtensionManager
 
 
-class Sidebar:
-    """Left sidebar with tabbed panels."""
+class FileTree(QWidget):
+    """File tree explorer."""
 
-    def __init__(self, parent, app):
+    def __init__(self, app):
+        super().__init__()
         self.app = app
-        self.visible = True
-        self.icon_mgr = IconManager()
-        self._icon_refs = []
-        self.active_panel = "explorer"
 
-        self.frame = ttk.Frame(parent, width=app.settings["sidebar_width"])
-        self.frame.pack_propagate(False)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
 
-        self._build_tab_bar()
-        self._build_panels()
-        self._switch_panel("explorer")
+        self.model = QFileSystemModel()
+        self.model.setRootPath("")
+        self.model.setFilter(
+            QDir.Filter.AllDirs | QDir.Filter.Files | QDir.Filter.NoDotAndDotDot
+        )
+        self.model.setNameFilterDisables(False)
 
-    def _build_tab_bar(self):
-        """VS Code style vertical icon tab bar."""
-        self.tab_bar = ttk.Frame(self.frame, padding=(2, 4, 2, 4))
-        self.tab_bar.pack(fill=X, padx=0, pady=0)
+        self.tree = QTreeView()
+        self.tree.setModel(self.model)
+        self.tree.setHeaderHidden(True)
+        self.tree.hideColumn(1)
+        self.tree.hideColumn(2)
+        self.tree.hideColumn(3)
+        self.tree.setAnimated(True)
+        self.tree.setIndentation(16)
+        self.tree.doubleClicked.connect(self._on_double_click)
 
-        self.tab_buttons = {}
+        layout.addWidget(self.tree)
 
-        tabs = [
-            ("explorer", "explorer", "Explorer"),
-            ("git", "folder_git", "Source Control"),
-            ("extensions", "settings", "Extensions"),
+    def load_directory(self, path):
+        self.model.setRootPath(path)
+        self.tree.setRootIndex(self.model.index(path))
+
+    def _on_double_click(self, index: QModelIndex):
+        path = self.model.filePath(index)
+        if os.path.isfile(path):
+            self.app.file_manager.open_file(path)
+
+
+class SidebarPanel(QWidget):
+    """Base class for sidebar panels."""
+
+    def __init__(self, title, app):
+        super().__init__()
+        self.app = app
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(8, 8, 8, 8)
+        layout.setSpacing(6)
+
+        header = QLabel(title.upper())
+        header.setProperty("cssClass", "header")
+        layout.addWidget(header)
+
+        sep = QFrame()
+        sep.setProperty("cssClass", "separator")
+        sep.setFixedHeight(1)
+        layout.addWidget(sep)
+
+        self.content_layout = layout
+
+
+class ExplorerPanel(SidebarPanel):
+    """File explorer panel."""
+
+    def __init__(self, app):
+        super().__init__("Explorer", app)
+
+        btn_row = QHBoxLayout()
+
+        new_btn = QPushButton("New File")
+        new_btn.setProperty("cssClass", "primary")
+        new_btn.clicked.connect(app.file_manager.new_file)
+        btn_row.addWidget(new_btn)
+
+        open_btn = QPushButton("Open File")
+        open_btn.clicked.connect(app.file_manager.open_file)
+        btn_row.addWidget(open_btn)
+
+        self.content_layout.addLayout(btn_row)
+
+        open_folder = QPushButton("Open Folder")
+        open_folder.clicked.connect(lambda: app.open_project())
+        self.content_layout.addWidget(open_folder)
+
+        sep = QFrame()
+        sep.setProperty("cssClass", "separator")
+        sep.setFixedHeight(1)
+        self.content_layout.addWidget(sep)
+
+        self.file_tree = FileTree(app)
+        self.content_layout.addWidget(self.file_tree, 1)
+
+
+class GitPanel(SidebarPanel):
+    """Git source control panel."""
+
+    def __init__(self, app):
+        super().__init__("Source Control", app)
+
+        gm = app.git_manager
+
+        sections = [
+            ("Repository", [
+                ("Clone", gm.clone_repo),
+                ("Init", gm.init_repo),
+                ("Set Remote", gm.add_remote),
+            ]),
+            ("Changes", [
+                ("Status", gm.git_status),
+                ("Diff", gm.git_diff),
+                ("Stage All", gm.git_add_all),
+            ]),
+            ("Commit & Sync", [
+                ("Commit", gm.git_commit),
+                ("Push", gm.git_push),
+                ("Pull", gm.git_pull),
+            ]),
+            ("History", [
+                ("Log", gm.git_log),
+                ("Branches", gm.git_branch),
+            ]),
         ]
 
-        for tab_id, icon_name, tooltip in tabs:
-            icon = self.icon_mgr.get(icon_name, 18)
-            self._icon_refs.append(icon)
+        for section_name, buttons in sections:
+            label = QLabel(f"  {section_name}")
+            label.setProperty("cssClass", "dim")
+            label.setFont(QFont("Segoe UI", 8))
+            self.content_layout.addWidget(label)
 
-            btn = ttk.Button(
-                self.tab_bar,
-                image=icon,
-                bootstyle="secondary-link",
-                command=lambda t=tab_id: self._switch_panel(t),
-                padding=(10, 7),
-                cursor="hand2",
-            )
-            btn.pack(side=LEFT, padx=1)
+            for text, callback in buttons:
+                btn = QPushButton(text)
+                btn.clicked.connect(callback)
+                self.content_layout.addWidget(btn)
 
-            btn._base_style = "secondary-link"
-            btn._active_style = "info"
-            btn._tab_id = tab_id
+            sep = QFrame()
+            sep.setProperty("cssClass", "separator")
+            sep.setFixedHeight(1)
+            self.content_layout.addWidget(sep)
 
+        self.content_layout.addStretch()
+
+
+class ExtensionsPanel(SidebarPanel):
+    """Extensions marketplace panel."""
+
+    def __init__(self, app):
+        super().__init__("Extensions", app)
+        self.ext_manager = app.extension_manager
+
+        # Search
+        search_row = QHBoxLayout()
+        self.search_input = QLineEdit()
+        self.search_input.setPlaceholderText("Search extensions...")
+        self.search_input.returnPressed.connect(self._on_search)
+        search_row.addWidget(self.search_input, 1)
+
+        search_btn = QPushButton("Search")
+        search_btn.setProperty("cssClass", "primary")
+        search_btn.clicked.connect(self._on_search)
+        search_row.addWidget(search_btn)
+
+        self.content_layout.addLayout(search_row)
+
+        # Status
+        self.status_label = QLabel("Search for extensions above")
+        self.status_label.setProperty("cssClass", "dim")
+        self.content_layout.addWidget(self.status_label)
+
+        # Tab buttons
+        tab_row = QHBoxLayout()
+
+        self.marketplace_btn = QPushButton("Marketplace")
+        self.marketplace_btn.setProperty("cssClass", "primary")
+        self.marketplace_btn.clicked.connect(lambda: self._switch_tab("marketplace"))
+        tab_row.addWidget(self.marketplace_btn)
+
+        self.installed_btn = QPushButton("Installed")
+        self.installed_btn.clicked.connect(lambda: self._switch_tab("installed"))
+        tab_row.addWidget(self.installed_btn)
+
+        self.content_layout.addLayout(tab_row)
+
+        # Results scroll area
+        self.scroll = QScrollArea()
+        self.scroll.setWidgetResizable(True)
+        self.scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.results_widget = QWidget()
+        self.results_layout = QVBoxLayout(self.results_widget)
+        self.results_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self.scroll.setWidget(self.results_widget)
+        self.content_layout.addWidget(self.scroll, 1)
+
+        self.current_tab = "marketplace"
+
+    def _switch_tab(self, tab):
+        self.current_tab = tab
+        if tab == "installed":
+            self._show_installed()
+        else:
+            self._clear_results()
+            self.status_label.setText("Search for extensions above")
+
+    def _on_search(self):
+        query = self.search_input.text().strip()
+        if not query:
+            return
+
+        self.current_tab = "marketplace"
+        self._clear_results()
+        self.status_label.setText("Searching...")
+        self.app.set_status(f"Searching: {query}")
+
+        self.ext_manager.search(query, self._on_results)
+
+    def _on_results(self, results, error):
+        self._clear_results()
+
+        if error:
+            self.status_label.setText(f"Error: {error}")
+            return
+        if not results:
+            self.status_label.setText("No extensions found.")
+            return
+
+        self.status_label.setText(f"{len(results)} found")
+        for ext in results:
+            self._add_card(ext, "marketplace")
+
+    def _show_installed(self):
+        self._clear_results()
+        installed = self.ext_manager.get_installed()
+        if not installed:
+            self.status_label.setText("No extensions installed.")
+            return
+        self.status_label.setText(f"{len(installed)} installed")
+        for ext in installed:
+            self._add_card(ext, "installed")
+
+    def _add_card(self, ext_info, mode):
+        card = QFrame()
+        card_layout = QVBoxLayout(card)
+        card_layout.setContentsMargins(8, 6, 8, 6)
+        card_layout.setSpacing(2)
+
+        # Name + version
+        name_row = QHBoxLayout()
+        name = QLabel(ext_info.get("name", ext_info.get("id", "Unknown")))
+        name.setFont(QFont("Segoe UI", 10))
+        name.setStyleSheet("font-weight: bold;")
+        name_row.addWidget(name)
+
+        ver = QLabel(f"v{ext_info.get('version', '')}")
+        ver.setProperty("cssClass", "dim")
+        name_row.addWidget(ver)
+        name_row.addStretch()
+        card_layout.addLayout(name_row)
+
+        # Publisher
+        pub = ext_info.get("publisher", "")
+        if pub:
+            pub_label = QLabel(pub)
+            pub_label.setProperty("cssClass", "accent")
+            pub_label.setFont(QFont("Segoe UI", 8))
+            card_layout.addWidget(pub_label)
+
+        # Description
+        desc = ext_info.get("description", "")
+        if desc:
+            desc_label = QLabel(desc[:120] + ("..." if len(desc) > 120 else ""))
+            desc_label.setWordWrap(True)
+            desc_label.setProperty("cssClass", "dim")
+            card_layout.addWidget(desc_label)
+
+        # Stats
+        if mode == "marketplace":
+            installs = ext_info.get("installs", 0)
+            stats = QLabel(f"Downloads: {ExtensionManager.format_installs(installs)}")
+            stats.setProperty("cssClass", "dim")
+            stats.setFont(QFont("Segoe UI", 8))
+            card_layout.addWidget(stats)
+
+        # Action button
+        if mode == "marketplace":
+            if ext_info.get("installed", False):
+                installed_label = QLabel("Installed")
+                installed_label.setStyleSheet(f"color: {self.app.colors.get('success', '#a6e3a1')}; font-weight: bold;")
+                card_layout.addWidget(installed_label)
+            else:
+                install_btn = QPushButton("Install")
+                install_btn.setProperty("cssClass", "success")
+                install_btn.clicked.connect(lambda checked, ei=ext_info: self._install(ei))
+                card_layout.addWidget(install_btn)
+        else:
+            uninstall_btn = QPushButton("Uninstall")
+            uninstall_btn.setProperty("cssClass", "danger")
+            uninstall_btn.clicked.connect(lambda checked, ei=ext_info: self._uninstall(ei))
+            card_layout.addWidget(uninstall_btn)
+
+        self.results_layout.addWidget(card)
+
+        sep = QFrame()
+        sep.setProperty("cssClass", "separator")
+        sep.setFixedHeight(1)
+        self.results_layout.addWidget(sep)
+
+    def _install(self, ext_info):
+        name = ext_info.get("name", "extension")
+        self.status_label.setText(f"Installing {name}...")
+        self.app.set_status(f"Installing {name}...")
+
+        def _on_done(success, message):
+            self.status_label.setText(message)
+            self.app.set_status(message)
+            if success:
+                QMessageBox.information(self, "Installed", message)
+                self._on_search()
+            else:
+                QMessageBox.warning(self, "Failed", message)
+
+        self.ext_manager.install_extension(ext_info, _on_done)
+
+    def _uninstall(self, ext_info):
+        ext_id = ext_info.get("id", "")
+        name = ext_info.get("name", ext_id)
+
+        result = QMessageBox.question(self, "Uninstall", f"Uninstall {name}?")
+        if result != QMessageBox.StandardButton.Yes:
+            return
+
+        ok, msg = self.ext_manager.uninstall_extension(ext_id)
+        if ok:
+            self.app.set_status(msg)
+            self._show_installed()
+        else:
+            QMessageBox.warning(self, "Failed", msg)
+
+    def _clear_results(self):
+        while self.results_layout.count():
+            child = self.results_layout.takeAt(0)
+            if child.widget():
+                child.widget().deleteLater()
+
+
+class Sidebar(QWidget):
+    """Sidebar with tab buttons and stacked panels."""
+
+    def __init__(self, app):
+        super().__init__()
+        self.app = app
+        self.setFixedWidth(app.settings["sidebar_width"])
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        # Tab buttons
+        btn_row = QHBoxLayout()
+        btn_row.setContentsMargins(4, 4, 4, 0)
+        btn_row.setSpacing(2)
+
+        self.tab_buttons = {}
+        tabs = [("explorer", "Explorer"), ("git", "Git"), ("extensions", "Ext")]
+
+        for tab_id, label in tabs:
+            btn = QPushButton(label)
+            btn.setCheckable(True)
+            btn.clicked.connect(lambda checked, t=tab_id: self._switch(t))
+            btn_row.addWidget(btn)
             self.tab_buttons[tab_id] = btn
 
-        ttk.Separator(self.frame).pack(fill=X, padx=0, pady=(2, 0))
+        layout.addLayout(btn_row)
 
-    def _build_panels(self):
-        """Build all sidebar panels."""
-        self.panels = {}
-        self.panels["explorer"] = self._build_explorer()
-        self.panels["git"] = self._build_git()
+        # Panels
+        self.stack = QStackedWidget()
 
-        ext_panel = ExtensionsPanel(self.frame, self.app)
-        self.panels["extensions"] = ext_panel.frame
+        self.explorer_panel = ExplorerPanel(app)
+        self.stack.addWidget(self.explorer_panel)
 
-    def _section_header(self, parent, icon_name, title):
-        """Create a VS Code style section header."""
-        header = ttk.Frame(parent, padding=(10, 6, 10, 4))
-        header.pack(fill=X)
+        self.git_panel = GitPanel(app)
+        self.stack.addWidget(self.git_panel)
 
-        icon = self.icon_mgr.get(icon_name, 14)
-        self._icon_refs.append(icon)
+        self.extensions_panel = ExtensionsPanel(app)
+        self.stack.addWidget(self.extensions_panel)
 
-        ttk.Label(
-            header,
-            text=f" {title.upper()}",
-            image=icon,
-            compound=LEFT,
-            font=("Segoe UI", 9, "bold"),
-            foreground="#a6adc8",
-        ).pack(side=LEFT)
+        layout.addWidget(self.stack, 1)
 
-        return header
+        self.file_tree = self.explorer_panel.file_tree
+        self._switch("explorer")
 
-    def _build_explorer(self):
-        """File explorer panel."""
-        panel = ttk.Frame(self.frame)
-
-        header = self._section_header(panel, "explorer", "Explorer")
-
-        open_icon = self.icon_mgr.get("open_file", 14)
-        make_icon_btn(
-            header, open_icon,
-            self.app.open_project, "info",
-            self._icon_refs,
-        ).pack(side=RIGHT, padx=2)
-
-        # Action buttons
-        actions = ttk.Frame(panel, padding=(8, 4, 8, 4))
-        actions.pack(fill=X)
-
-        new_icon = self.icon_mgr.get("new_file", 14)
-        make_round_btn(
-            actions, "New File", new_icon,
-            self.app.file_manager.new_file, "success",
-            self._icon_refs, size="small",
-        ).pack(fill=X, pady=1)
-
-        file_icon = self.icon_mgr.get("file", 14)
-        make_round_btn(
-            actions, "Open File", file_icon,
-            self.app.file_manager.open_file, "info",
-            self._icon_refs, size="small",
-        ).pack(fill=X, pady=1)
-
-        ttk.Separator(panel).pack(fill=X, padx=8, pady=4)
-
-        # File tree
-        self.file_tree = FileTree(panel, self.app)
-        self.file_tree.frame.pack(fill=BOTH, expand=True, padx=2, pady=2)
-
-        return panel
-
-    def _build_git(self):
-        """Git panel with VS Code style organized sections."""
-        panel = ttk.Frame(self.frame)
-
-        self._section_header(panel, "folder_git", "Source Control")
-
-        gm = self.app.git_manager
-
-        # Repository
-        self._mini_header(panel, "Repository")
-        repo = ttk.Frame(panel, padding=(8, 2, 8, 4))
-        repo.pack(fill=X)
-
-        make_round_btn(
-            repo, "Clone", self.icon_mgr.get("open_file", 14),
-            gm.clone_repo, "info", self._icon_refs, "small",
-        ).pack(fill=X, pady=1)
-
-        make_round_btn(
-            repo, "Init", self.icon_mgr.get("new_file", 14),
-            gm.init_repo, "success", self._icon_refs, "small",
-        ).pack(fill=X, pady=1)
-
-        make_round_btn(
-            repo, "Remote", self.icon_mgr.get("settings", 14),
-            gm.add_remote, "secondary", self._icon_refs, "small",
-        ).pack(fill=X, pady=1)
-
-        ttk.Separator(panel).pack(fill=X, padx=8, pady=4)
-
-        # Changes
-        self._mini_header(panel, "Changes")
-        changes = ttk.Frame(panel, padding=(8, 2, 8, 4))
-        changes.pack(fill=X)
-
-        make_round_btn(
-            changes, "Status", self.icon_mgr.get("info", 14),
-            gm.git_status, "info", self._icon_refs, "small",
-        ).pack(fill=X, pady=1)
-
-        make_round_btn(
-            changes, "Diff", self.icon_mgr.get("search", 14),
-            gm.git_diff, "warning", self._icon_refs, "small",
-        ).pack(fill=X, pady=1)
-
-        make_round_btn(
-            changes, "Stage All", self.icon_mgr.get("success", 14),
-            gm.git_add_all, "success", self._icon_refs, "small",
-        ).pack(fill=X, pady=1)
-
-        ttk.Separator(panel).pack(fill=X, padx=8, pady=4)
-
-        # Commit & Sync
-        self._mini_header(panel, "Commit & Sync")
-        sync = ttk.Frame(panel, padding=(8, 2, 8, 4))
-        sync.pack(fill=X)
-
-        make_round_btn(
-            sync, "Commit", self.icon_mgr.get("success", 14),
-            gm.git_commit, "success", self._icon_refs, "small",
-        ).pack(fill=X, pady=1)
-
-        row = ttk.Frame(sync)
-        row.pack(fill=X, pady=1)
-
-        make_round_btn(
-            row, "Push", self.icon_mgr.get("arrow_right", 14),
-            gm.git_push, "info", self._icon_refs, "small",
-        ).pack(side=LEFT, fill=X, expand=True, padx=(0, 2))
-
-        make_round_btn(
-            row, "Pull", self.icon_mgr.get("arrow_left", 14),
-            gm.git_pull, "info", self._icon_refs, "small",
-        ).pack(side=LEFT, fill=X, expand=True, padx=(2, 0))
-
-        ttk.Separator(panel).pack(fill=X, padx=8, pady=4)
-
-        # History
-        self._mini_header(panel, "History")
-        hist = ttk.Frame(panel, padding=(8, 2, 8, 4))
-        hist.pack(fill=X)
-
-        make_round_btn(
-            hist, "Log", self.icon_mgr.get("file_text", 14),
-            gm.git_log, "secondary", self._icon_refs, "small",
-        ).pack(fill=X, pady=1)
-
-        make_round_btn(
-            hist, "Branches", self.icon_mgr.get("folder_src", 14),
-            gm.git_branch, "secondary", self._icon_refs, "small",
-        ).pack(fill=X, pady=1)
-
-        return panel
-
-    def _mini_header(self, parent, text):
-        """Small section divider label."""
-        ttk.Label(
-            parent,
-            text=f"  {text}",
-            font=("Segoe UI", 8, "bold"),
-            foreground="#6c7086",
-            padding=(8, 4, 8, 0),
-        ).pack(anchor="w")
-
-    def _switch_panel(self, panel_id):
-        """Switch visible panel."""
-        self.active_panel = panel_id
-
-        for pid, panel in self.panels.items():
-            panel.pack_forget()
-
-        self.panels[panel_id].pack(fill=BOTH, expand=True)
-
+    def _switch(self, panel_id):
+        panels = {"explorer": 0, "git": 1, "extensions": 2}
+        self.stack.setCurrentIndex(panels.get(panel_id, 0))
         for tid, btn in self.tab_buttons.items():
-            if tid == panel_id:
-                btn.configure(bootstyle="info")
-            else:
-                btn.configure(bootstyle="secondary-link")
-
-    def toggle(self):
-        if self.visible:
-            self.frame.pack_forget()
-            self.visible = False
-        else:
-            self.frame.pack(side=LEFT, fill=Y)
-            self.visible = True
+            btn.setChecked(tid == panel_id)

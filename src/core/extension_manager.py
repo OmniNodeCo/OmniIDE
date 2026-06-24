@@ -1,4 +1,4 @@
-"""VS Code Marketplace extension browser and installer."""
+"""Extension manager — downloads VSIX from VS Code Marketplace."""
 
 import json
 import os
@@ -22,58 +22,50 @@ class ExtensionManager:
     def __init__(self, app):
         self.app = app
         self.installed = self._load_installed()
-        self.search_results = []
-        self._callbacks = {}
 
     def _load_installed(self):
-        """Load list of installed extensions."""
-        manifest_path = os.path.join(EXTENSIONS_DIR, "installed.json")
-        if os.path.exists(manifest_path):
+        manifest = os.path.join(EXTENSIONS_DIR, "installed.json")
+        if os.path.exists(manifest):
             try:
-                with open(manifest_path, "r") as f:
+                with open(manifest, "r") as f:
                     return json.load(f)
             except Exception:
                 pass
         return []
 
     def _save_installed(self):
-        """Save installed extensions list."""
-        manifest_path = os.path.join(EXTENSIONS_DIR, "installed.json")
+        manifest = os.path.join(EXTENSIONS_DIR, "installed.json")
         try:
-            with open(manifest_path, "w") as f:
+            with open(manifest, "w") as f:
                 json.dump(self.installed, f, indent=2)
         except Exception:
             pass
 
     def search(self, query, callback, page_size=15):
-        """
-        Search VS Code Marketplace.
-        callback(results, error) called on main thread.
-        """
-        def _do_search():
+        def _do():
             try:
-                results = self._query_marketplace(query, page_size)
-                self.app.root.after(0, callback, results, None)
+                results = self._query(query, page_size)
+                # Use QTimer for thread safety
+                from PyQt6.QtCore import QMetaObject, Qt, Q_ARG
+                self.app.statusbar.set_text(f"Found {len(results)} extensions")
+                callback(results, None)
             except Exception as e:
-                self.app.root.after(0, callback, [], str(e))
+                callback([], str(e))
 
-        threading.Thread(target=_do_search, daemon=True).start()
+        threading.Thread(target=_do, daemon=True).start()
 
-    def _query_marketplace(self, query, page_size=15):
-        """Query the VS Code Marketplace API."""
+    def _query(self, query, page_size=15):
         payload = {
-            "filters": [
-                {
-                    "criteria": [
-                        {"filterType": 8, "value": "Microsoft.VisualStudio.Code"},
-                        {"filterType": 10, "value": query},
-                    ],
-                    "pageNumber": 1,
-                    "pageSize": page_size,
-                    "sortBy": 0,
-                    "sortOrder": 0,
-                }
-            ],
+            "filters": [{
+                "criteria": [
+                    {"filterType": 8, "value": "Microsoft.VisualStudio.Code"},
+                    {"filterType": 10, "value": query},
+                ],
+                "pageNumber": 1,
+                "pageSize": page_size,
+                "sortBy": 0,
+                "sortOrder": 0,
+            }],
             "assetTypes": [],
             "flags": 950,
         }
@@ -81,16 +73,11 @@ class ExtensionManager:
         headers = {
             "Content-Type": "application/json",
             "Accept": f"application/json;api-version={VSCODE_MARKETPLACE_VERSION}",
-            "User-Agent": "OmniIDE/1.0.1",
+            "User-Agent": "OmniIDE/1.0.4",
         }
 
         data = json.dumps(payload).encode("utf-8")
-        req = urllib.request.Request(
-            VSCODE_MARKETPLACE_URL,
-            data=data,
-            headers=headers,
-            method="POST",
-        )
+        req = urllib.request.Request(VSCODE_MARKETPLACE_URL, data=data, headers=headers, method="POST")
 
         with urllib.request.urlopen(req, timeout=15) as resp:
             body = json.loads(resp.read().decode("utf-8"))
@@ -102,85 +89,57 @@ class ExtensionManager:
             return results
 
         for ext in extensions:
-            info = self._parse_extension(ext)
+            info = self._parse(ext)
             if info:
                 results.append(info)
-
         return results
 
-    def _parse_extension(self, ext):
-        """Parse extension data from API response."""
+    def _parse(self, ext):
         try:
             name = ext.get("extensionName", "")
             publisher = ext.get("publisher", {}).get("publisherName", "")
-            display_name = ext.get("displayName", name)
-            short_desc = ext.get("shortDescription", "")
-            ext_id = ext.get("extensionId", "")
+            display = ext.get("displayName", name)
+            desc = ext.get("shortDescription", "")
 
-            # Get version info
             versions = ext.get("versions", [])
             version = versions[0].get("version", "0.0.0") if versions else "0.0.0"
 
-            # Get install count and rating
             stats = ext.get("statistics", [])
             installs = 0
-            rating = 0
-            for stat in stats:
-                if stat.get("statisticName") == "install":
-                    installs = int(stat.get("value", 0))
-                elif stat.get("statisticName") == "averagerating":
-                    rating = round(float(stat.get("value", 0)), 1)
+            for s in stats:
+                if s.get("statisticName") == "install":
+                    installs = int(s.get("value", 0))
 
-            # Get icon URL
-            icon_url = ""
-            if versions:
-                for file_info in versions[0].get("files", []):
-                    if file_info.get("assetType") == "Microsoft.VisualStudio.Services.Icons.Default":
-                        icon_url = file_info.get("source", "")
-                        break
-
-            # Get VSIX download URL
+            # VSIX download URL
             vsix_url = ""
             if versions:
-                for file_info in versions[0].get("files", []):
-                    if file_info.get("assetType") == "Microsoft.VisualStudio.Services.VSIXPackage":
-                        vsix_url = file_info.get("source", "")
+                for f in versions[0].get("files", []):
+                    if f.get("assetType") == "Microsoft.VisualStudio.Services.VSIXPackage":
+                        vsix_url = f.get("source", "")
                         break
 
-            # Check if installed
             full_id = f"{publisher}.{name}"
-            is_installed = any(
-                e.get("id") == full_id for e in self.installed
-            )
+            is_installed = any(e.get("id") == full_id for e in self.installed)
 
             return {
                 "id": full_id,
-                "name": display_name,
+                "name": display,
                 "publisher": publisher,
-                "description": short_desc,
+                "description": desc,
                 "version": version,
                 "installs": installs,
-                "rating": rating,
-                "icon_url": icon_url,
                 "vsix_url": vsix_url,
                 "installed": is_installed,
-                "extension_id": ext_id,
             }
         except Exception:
             return None
 
     def install_extension(self, ext_info, callback):
-        """
-        Download and install a VSIX extension.
-        callback(success, message) called on main thread.
-        """
-        def _do_install():
+        def _do():
             try:
                 vsix_url = ext_info.get("vsix_url", "")
                 if not vsix_url:
-                    self.app.root.after(
-                        0, callback, False, "No download URL available."
-                    )
+                    callback(False, "No download URL")
                     return
 
                 ext_id = ext_info["id"]
@@ -188,17 +147,25 @@ class ExtensionManager:
                 os.makedirs(ext_dir, exist_ok=True)
 
                 # Download VSIX
-                req = urllib.request.Request(
-                    vsix_url,
-                    headers={"User-Agent": "OmniIDE/1.0.1"},
-                )
-
+                req = urllib.request.Request(vsix_url, headers={"User-Agent": "OmniIDE/1.0.4"})
                 with urllib.request.urlopen(req, timeout=60) as resp:
                     vsix_data = resp.read()
 
-                # VSIX is a zip file — extract it
+                # Extract — VSIX is a zip
                 with zipfile.ZipFile(io.BytesIO(vsix_data)) as zf:
                     zf.extractall(ext_dir)
+
+                # Read package.json from the extension
+                pkg_json = None
+                for root, dirs, files in os.walk(ext_dir):
+                    if "package.json" in files:
+                        pkg_path = os.path.join(root, "package.json")
+                        try:
+                            with open(pkg_path, "r", encoding="utf-8") as f:
+                                pkg_json = json.load(f)
+                        except Exception:
+                            pass
+                        break
 
                 # Save metadata
                 meta = {
@@ -206,56 +173,58 @@ class ExtensionManager:
                     "name": ext_info["name"],
                     "publisher": ext_info["publisher"],
                     "version": ext_info["version"],
-                    "description": ext_info["description"],
+                    "description": ext_info.get("description", ""),
+                    "dir": ext_dir,
                 }
+
+                if pkg_json:
+                    meta["contributes"] = pkg_json.get("contributes", {})
+                    meta["engines"] = pkg_json.get("engines", {})
 
                 meta_path = os.path.join(ext_dir, "omniide_meta.json")
                 with open(meta_path, "w") as f:
                     json.dump(meta, f, indent=2)
 
-                # Add to installed list
                 if not any(e["id"] == ext_id for e in self.installed):
                     self.installed.append(meta)
                     self._save_installed()
 
-                self.app.root.after(
-                    0, callback, True,
-                    f"Installed {ext_info['name']} v{ext_info['version']}"
-                )
+                callback(True, f"Installed {ext_info['name']} v{ext_info['version']}")
 
-            except urllib.error.URLError as e:
-                self.app.root.after(
-                    0, callback, False, f"Network error: {e}"
-                )
             except Exception as e:
-                self.app.root.after(
-                    0, callback, False, f"Install failed: {e}"
-                )
+                callback(False, f"Install failed: {e}")
 
-        threading.Thread(target=_do_install, daemon=True).start()
+        threading.Thread(target=_do, daemon=True).start()
 
     def uninstall_extension(self, ext_id):
-        """Remove an installed extension."""
         ext_dir = os.path.join(EXTENSIONS_DIR, ext_id)
         try:
             if os.path.isdir(ext_dir):
                 shutil.rmtree(ext_dir)
-
-            self.installed = [
-                e for e in self.installed if e.get("id") != ext_id
-            ]
+            self.installed = [e for e in self.installed if e.get("id") != ext_id]
             self._save_installed()
             return True, f"Uninstalled {ext_id}"
         except Exception as e:
             return False, str(e)
 
     def get_installed(self):
-        """Return list of installed extensions."""
         return self.installed.copy()
+
+    def get_extension_contributes(self, ext_id):
+        """Get what an installed extension contributes (themes, languages, snippets)."""
+        ext_dir = os.path.join(EXTENSIONS_DIR, ext_id)
+        meta_path = os.path.join(ext_dir, "omniide_meta.json")
+        if os.path.exists(meta_path):
+            try:
+                with open(meta_path, "r") as f:
+                    meta = json.load(f)
+                return meta.get("contributes", {})
+            except Exception:
+                pass
+        return {}
 
     @staticmethod
     def format_installs(count):
-        """Format install count for display."""
         if count >= 1_000_000:
             return f"{count / 1_000_000:.1f}M"
         elif count >= 1_000:
@@ -264,8 +233,4 @@ class ExtensionManager:
 
     @staticmethod
     def format_rating(rating):
-        """Format rating as stars."""
-        full = int(rating)
-        stars = "*" * full
-        empty = "*" * (5 - full)
-        return f"[{stars}{'.' * (5 - full)}] {rating}"
+        return f"{rating}"

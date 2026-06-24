@@ -1,7 +1,4 @@
-"""
-OmniIDE by OmniNodeCo
-Entry point — handles cleanup on exit.
-"""
+"""OmniIDE by OmniNodeCo — PyQt6 entry point."""
 
 import sys
 import os
@@ -10,24 +7,18 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 
 def main():
+    from PyQt6.QtWidgets import QApplication
+    from PyQt6.QtCore import Qt
     from src.app import OmniIDEApp
 
-    app = OmniIDEApp()
+    app = QApplication(sys.argv)
+    app.setApplicationName("OmniIDE")
+    app.setOrganizationName("OmniNodeCo")
 
-    # Clean up terminal on exit
-    def on_close():
-        try:
-            app.terminal.destroy()
-        except Exception:
-            pass
-        try:
-            app.save_settings()
-        except Exception:
-            pass
-        app.root.destroy()
+    window = OmniIDEApp()
+    window.show()
 
-    app.root.protocol("WM_DELETE_WINDOW", on_close)
-    app.run()
+    sys.exit(app.exec())
 
 
 if __name__ == "__main__":
