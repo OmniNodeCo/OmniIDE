@@ -1,4 +1,4 @@
-"""Splash screen — PyQt6."""
+"""Splash screen — PyQt6 v1.0.5."""
 
 from PyQt6.QtWidgets import QWidget, QLabel, QVBoxLayout, QProgressBar
 from PyQt6.QtCore import Qt
@@ -17,7 +17,6 @@ class SplashScreen(QWidget):
         self.setFixedSize(420, 280)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, False)
 
-        # Center on screen
         from PyQt6.QtWidgets import QApplication
         screen = QApplication.primaryScreen().geometry()
         self.move(
@@ -39,7 +38,6 @@ class SplashScreen(QWidget):
 
         layout.addStretch()
 
-        # Logo text
         logo = QLabel("<  >")
         logo.setAlignment(Qt.AlignmentFlag.AlignCenter)
         logo.setFont(QFont("Consolas", 28, QFont.Weight.Bold))
@@ -60,14 +58,12 @@ class SplashScreen(QWidget):
 
         layout.addStretch()
 
-        # Status
         self.status_label = QLabel("Starting up...")
         self.status_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.status_label.setFont(QFont("Segoe UI", 9))
         self.status_label.setStyleSheet("color: #6c7086; border: none;")
         layout.addWidget(self.status_label)
 
-        # Progress bar
         self.progress = QProgressBar()
         self.progress.setRange(0, 100)
         self.progress.setValue(0)
@@ -86,8 +82,7 @@ class SplashScreen(QWidget):
         """)
         layout.addWidget(self.progress)
 
-        # Version
-        version = QLabel("v1.0.4")
+        version = QLabel("v1.0.5")
         version.setAlignment(Qt.AlignmentFlag.AlignRight)
         version.setFont(QFont("Consolas", 8))
         version.setStyleSheet("color: #6c7086; border: none;")
