@@ -7,23 +7,14 @@ permissions:
   contents: read
 
 jobs:
-  check-badge:
-    name: "Verify View Counter"
+  check:
+    name: "Verify Badge"
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Check badge in README
-        run: |
+      - uses: actions/checkout@v4
+      - run: |
           if grep -q "komarev.com/ghpvc" README.md; then
-            echo "View counter badge found in README.md"
+            echo "View counter badge — OK"
           else
-            echo "Warning: No komarev badge found"
-            echo "Add this to README.md:"
-            echo '![Views](https://komarev.com/ghpvc/?username=OmniNodeCo-OmniIDE&label=Views&color=89b4fa&style=for-the-badge&abbreviated=true)'
+            echo "WARNING: No komarev badge in README"
           fi
-
-      - name: Done
-        run: echo "View counter is handled by komarev.com badge — no action needed"

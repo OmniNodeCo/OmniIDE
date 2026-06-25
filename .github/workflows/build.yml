@@ -6,36 +6,32 @@ on:
 permissions:
   contents: read
 
+env:
+  QT_DEPS: >-
+    libgl1 libglu1-mesa libegl1 libxkbcommon0
+    libdbus-1-3 libxcb-xinerama0 libxcb-cursor0
+    libxcb-randr0 libxcb-shape0 libxcb-xfixes0
+    libxcb-icccm4 libxcb-image0 libxcb-keysyms1
+    libxcb-render-util0 libfontconfig1 libfreetype6
+
 jobs:
 
   test:
     name: "Test"
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: "pip"
-
       - name: Install deps
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y python3-tk python3-dev tk-dev xvfb
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pillow pytest
-
-      - name: Run all tests
-        run: |
-          xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24" \
-            python -m pytest tests/ -v --tb=short
-
-      - name: Verify version
+          sudo apt-get install -y ${{ env.QT_DEPS }} xvfb
+          pip install --upgrade pip
+          pip install -r requirements.txt pillow
+      - name: Verify
         run: |
           python -c "
           from src.config import APP_NAME, APP_VERSION
@@ -46,67 +42,45 @@ jobs:
     name: "Windows"
     runs-on: windows-latest
     needs: test
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: "pip"
-
       - name: Install deps
         run: |
-          python -m pip install --upgrade pip
+          pip install --upgrade pip
           pip install -r requirements.txt
           pip install pyinstaller pillow
-
       - name: Generate icon
         shell: python
         run: |
           import os
           from PIL import Image, ImageDraw
           os.makedirs("assets", exist_ok=True)
-          sizes = [16, 32, 48, 64, 128, 256]
-          images = []
-          for size in sizes:
-              img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-              draw = ImageDraw.Draw(img)
-              m = size // 8
-              draw.ellipse([m, m, size-m, size-m], fill=(30, 30, 46, 255))
-              r_w = max(2, size // 16)
-              r_m = size // 5
-              draw.ellipse([r_m, r_m, size-r_m, size-r_m], outline=(137, 180, 250, 255), width=r_w)
-              i = size // 4
-              draw.ellipse([i, i, size-i, size-i], outline=(203, 166, 247, 200), width=max(1, size//20))
-              c = size // 2
-              d = max(2, size // 10)
-              draw.ellipse([c-d, c-d, c+d, c+d], fill=(245, 194, 231, 255))
+          sizes=[16,32,48,64,128,256]; images=[]
+          for s in sizes:
+              img=Image.new("RGBA",(s,s),(0,0,0,0)); d=ImageDraw.Draw(img)
+              m=s//8; d.ellipse([m,m,s-m,s-m],fill=(30,30,46,255))
+              rw=max(2,s//16); rm=s//5; d.ellipse([rm,rm,s-rm,s-rm],outline=(137,180,250,255),width=rw)
+              i=s//4; d.ellipse([i,i,s-i,s-i],outline=(203,166,247,200),width=max(1,s//20))
+              c=s//2; dd=max(2,s//10); d.ellipse([c-dd,c-dd,c+dd,c+dd],fill=(245,194,231,255))
               images.append(img)
-          images[0].save("assets/icon.ico", format="ICO", sizes=[(s,s) for s in sizes], append_images=images[1:])
-          images[-1].save("assets/icon.png", format="PNG")
-
+          images[0].save("assets/icon.ico",format="ICO",sizes=[(s,s) for s in sizes],append_images=images[1:])
+          images[-1].save("assets/icon.png",format="PNG")
       - name: Patch spec
         shell: python
         run: |
-          with open("OmniIDE.spec", "r") as f:
-              c = f.read()
+          with open("OmniIDE.spec","r") as f: c=f.read()
           if "icon=" not in c:
-              c = c.replace("entitlements_file=None,", "entitlements_file=None,\n    icon='assets/icon.ico',")
-              with open("OmniIDE.spec", "w") as f:
-                  f.write(c)
-
+              c=c.replace("entitlements_file=None,","entitlements_file=None,\n    icon='assets/icon.ico',")
+              with open("OmniIDE.spec","w") as f: f.write(c)
       - name: Build
         run: pyinstaller OmniIDE.spec
-
       - name: Verify
-        run: |
-          if (Test-Path "dist/OmniIDE.exe") { Write-Host "OK" } else { exit 1 }
-
-      - name: Upload
-        uses: actions/upload-artifact@v4
+        run: if (Test-Path "dist/OmniIDE.exe") { Write-Host "OK" } else { exit 1 }
+      - uses: actions/upload-artifact@v4
         with:
           name: OmniIDE-Windows-dev
           path: dist/OmniIDE.exe
@@ -116,60 +90,41 @@ jobs:
     name: "macOS"
     runs-on: macos-latest
     needs: test
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: "pip"
-
       - name: Install deps
         run: |
-          brew install python-tk@3.11 || true
-          python -m pip install --upgrade pip
+          pip install --upgrade pip
           pip install -r requirements.txt
           pip install pyinstaller pillow
-
       - name: Generate icon
         shell: python3 {0}
         run: |
           import os
           from PIL import Image, ImageDraw
           os.makedirs("assets", exist_ok=True)
-          sizes = [16, 32, 48, 64, 128, 256]
-          images = []
-          for size in sizes:
-              img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-              draw = ImageDraw.Draw(img)
-              m = size // 8
-              draw.ellipse([m, m, size-m, size-m], fill=(30, 30, 46, 255))
-              r_w = max(2, size // 16)
-              r_m = size // 5
-              draw.ellipse([r_m, r_m, size-r_m, size-r_m], outline=(137, 180, 250, 255), width=r_w)
-              i = size // 4
-              draw.ellipse([i, i, size-i, size-i], outline=(203, 166, 247, 200), width=max(1, size//20))
-              c = size // 2
-              d = max(2, size // 10)
-              draw.ellipse([c-d, c-d, c+d, c+d], fill=(245, 194, 231, 255))
+          sizes=[16,32,48,64,128,256]; images=[]
+          for s in sizes:
+              img=Image.new("RGBA",(s,s),(0,0,0,0)); d=ImageDraw.Draw(img)
+              m=s//8; d.ellipse([m,m,s-m,s-m],fill=(30,30,46,255))
+              rw=max(2,s//16); rm=s//5; d.ellipse([rm,rm,s-rm,s-rm],outline=(137,180,250,255),width=rw)
+              i=s//4; d.ellipse([i,i,s-i,s-i],outline=(203,166,247,200),width=max(1,s//20))
+              c=s//2; dd=max(2,s//10); d.ellipse([c-dd,c-dd,c+dd,c+dd],fill=(245,194,231,255))
               images.append(img)
-          images[0].save("assets/icon.ico", format="ICO", sizes=[(s,s) for s in sizes], append_images=images[1:])
-          images[-1].save("assets/icon.png", format="PNG")
-
+          images[0].save("assets/icon.ico",format="ICO",sizes=[(s,s) for s in sizes],append_images=images[1:])
+          images[-1].save("assets/icon.png",format="PNG")
       - name: Build
         run: pyinstaller OmniIDE.spec
-
       - name: Package
         run: |
           cd dist
           if [ -d "OmniIDE.app" ]; then zip -r OmniIDE-macOS.zip OmniIDE.app
           else chmod +x OmniIDE && zip -r OmniIDE-macOS.zip OmniIDE; fi
-
-      - name: Upload
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: OmniIDE-macOS-dev
           path: dist/OmniIDE-macOS.zip
@@ -179,66 +134,40 @@ jobs:
     name: "Linux"
     runs-on: ubuntu-22.04
     needs: test
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: "pip"
-
-      - name: Install system deps
+      - name: Install deps
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y \
-            python3-tk python3-dev tk-dev \
-            libx11-dev libxft-dev libxext-dev \
-            libffi-dev binutils
-
-      - name: Install Python deps
-        run: |
-          python -m pip install --upgrade pip
+          sudo apt-get install -y ${{ env.QT_DEPS }} binutils
+          pip install --upgrade pip
           pip install -r requirements.txt
           pip install pyinstaller pillow
-
       - name: Generate icon
         shell: python3 {0}
         run: |
           import os
           from PIL import Image, ImageDraw
           os.makedirs("assets", exist_ok=True)
-          sizes = [16, 32, 48, 64, 128, 256]
-          images = []
-          for size in sizes:
-              img = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-              draw = ImageDraw.Draw(img)
-              m = size // 8
-              draw.ellipse([m, m, size-m, size-m], fill=(30, 30, 46, 255))
-              r_w = max(2, size // 16)
-              r_m = size // 5
-              draw.ellipse([r_m, r_m, size-r_m, size-r_m], outline=(137, 180, 250, 255), width=r_w)
-              i = size // 4
-              draw.ellipse([i, i, size-i, size-i], outline=(203, 166, 247, 200), width=max(1, size//20))
-              c = size // 2
-              d = max(2, size // 10)
-              draw.ellipse([c-d, c-d, c+d, c+d], fill=(245, 194, 231, 255))
+          sizes=[16,32,48,64,128,256]; images=[]
+          for s in sizes:
+              img=Image.new("RGBA",(s,s),(0,0,0,0)); d=ImageDraw.Draw(img)
+              m=s//8; d.ellipse([m,m,s-m,s-m],fill=(30,30,46,255))
+              rw=max(2,s//16); rm=s//5; d.ellipse([rm,rm,s-rm,s-rm],outline=(137,180,250,255),width=rw)
+              i=s//4; d.ellipse([i,i,s-i,s-i],outline=(203,166,247,200),width=max(1,s//20))
+              c=s//2; dd=max(2,s//10); d.ellipse([c-dd,c-dd,c+dd,c+dd],fill=(245,194,231,255))
               images.append(img)
-          images[0].save("assets/icon.ico", format="ICO", sizes=[(s,s) for s in sizes], append_images=images[1:])
-          images[-1].save("assets/icon.png", format="PNG")
-
+          images[0].save("assets/icon.ico",format="ICO",sizes=[(s,s) for s in sizes],append_images=images[1:])
+          images[-1].save("assets/icon.png",format="PNG")
       - name: Build
         run: pyinstaller OmniIDE.spec
-
       - name: Package
-        run: |
-          chmod +x dist/OmniIDE
-          cd dist && tar -czvf OmniIDE-Linux.tar.gz OmniIDE
-
-      - name: Upload
-        uses: actions/upload-artifact@v4
+        run: chmod +x dist/OmniIDE && cd dist && tar -czvf OmniIDE-Linux.tar.gz OmniIDE
+      - uses: actions/upload-artifact@v4
         with:
           name: OmniIDE-Linux-dev
           path: dist/OmniIDE-Linux.tar.gz

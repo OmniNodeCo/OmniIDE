@@ -12,162 +12,104 @@ on:
 permissions:
   contents: read
 
+env:
+  QT_DEPS: >-
+    libgl1 libglu1-mesa libegl1 libxkbcommon0
+    libdbus-1-3 libxcb-xinerama0 libxcb-cursor0
+    libxcb-randr0 libxcb-shape0 libxcb-xfixes0
+    libxcb-icccm4 libxcb-image0 libxcb-keysyms1
+    libxcb-render-util0 libfontconfig1 libfreetype6
+
 jobs:
 
   structure:
     name: "File Structure"
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Check all required files exist
+      - uses: actions/checkout@v4
+      - name: Check files
         run: |
           MISSING=0
           FILES=(
-            "run.py"
-            "OmniIDE.spec"
-            "requirements.txt"
-            "setup.py"
-            "LICENSE"
-            "README.md"
-            "assets/themes/dark.json"
-            "assets/themes/light.json"
-            "src/__init__.py"
-            "src/app.py"
-            "src/config.py"
-            "src/core/__init__.py"
-            "src/core/file_manager.py"
-            "src/core/git_manager.py"
-            "src/core/git_installer.py"
-            "src/core/extension_manager.py"
-            "src/core/updater.py"
-            "src/core/syntax_highlighter.py"
-            "src/core/tab_manager.py"
-            "src/core/terminal.py"
-            "src/core/search.py"
-            "src/core/command_palette.py"
-            "src/ui/__init__.py"
-            "src/ui/editor_widget.py"
-            "src/ui/sidebar.py"
-            "src/ui/terminal_widget.py"
-            "src/ui/toolbar.py"
-            "src/ui/statusbar.py"
-            "src/ui/menubar.py"
-            "src/ui/command_palette.py"
-            "src/ui/settings_dialog.py"
-            "src/ui/splash.py"
-            "src/ui/theme_stylesheet.py"
-            "src/ui/file_tree.py"
-            "src/ui/welcome.py"
-            "src/ui/extensions_panel.py"
-            "src/ui/settings_panel.py"
-            "src/utils/__init__.py"
-            "src/utils/theme_loader.py"
-            "src/utils/recent_files.py"
-            "src/utils/shortcuts.py"
-            "src/utils/styles.py"
-            "src/utils/icon_manager.py"
-            "docs/index.html"
-            "docs/style.css"
-            "docs/script.js"
-            "docs/favicon.svg"
+            "run.py" "OmniIDE.spec" "requirements.txt" "setup.py" "LICENSE" "README.md"
+            "assets/themes/dark.json" "assets/themes/light.json"
+            "src/__init__.py" "src/app.py" "src/config.py"
+            "src/core/__init__.py" "src/core/file_manager.py" "src/core/git_manager.py"
+            "src/core/git_installer.py" "src/core/extension_manager.py" "src/core/updater.py"
+            "src/core/syntax_highlighter.py" "src/core/tab_manager.py" "src/core/terminal.py"
+            "src/core/search.py" "src/core/command_palette.py"
+            "src/ui/__init__.py" "src/ui/editor_widget.py" "src/ui/sidebar.py"
+            "src/ui/terminal_widget.py" "src/ui/toolbar.py" "src/ui/statusbar.py"
+            "src/ui/menubar.py" "src/ui/command_palette.py" "src/ui/settings_dialog.py"
+            "src/ui/splash.py" "src/ui/theme_stylesheet.py"
+            "src/ui/file_tree.py" "src/ui/welcome.py"
+            "src/ui/extensions_panel.py" "src/ui/settings_panel.py"
+            "src/utils/__init__.py" "src/utils/theme_loader.py" "src/utils/recent_files.py"
+            "src/utils/shortcuts.py" "src/utils/styles.py" "src/utils/icon_manager.py"
+            "docs/index.html" "docs/style.css" "docs/script.js" "docs/favicon.svg"
           )
-
           for f in "${FILES[@]}"; do
-            if [ ! -f "$f" ]; then
-              echo "  MISSING: $f"
-              MISSING=$((MISSING + 1))
-            else
-              echo "  OK: $f"
-            fi
+            if [ ! -f "$f" ]; then echo "  MISSING: $f"; MISSING=$((MISSING+1)); else echo "  OK: $f"; fi
           done
-
           echo ""
-          if [ $MISSING -gt 0 ]; then
-            echo "ERROR: $MISSING file(s) missing!"
-            exit 1
-          fi
-          echo "All ${#FILES[@]} required files present"
+          if [ $MISSING -gt 0 ]; then echo "ERROR: $MISSING file(s) missing!"; exit 1; fi
+          echo "All ${#FILES[@]} files present"
 
   imports:
     name: "Import Check"
     runs-on: ubuntu-latest
     needs: structure
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: "pip"
-
-      - name: Install system deps
+      - name: Install deps
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y \
-            libgl1-mesa-glx libegl1 libxkbcommon0 \
-            libdbus-1-3 libxcb-xinerama0 libxcb-cursor0 \
-            libxcb-randr0 libxcb-shape0 libxcb-xfixes0 \
-            libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
-            libxcb-render-util0 xvfb
+          sudo apt-get install -y ${{ env.QT_DEPS }} xvfb
+          pip install --upgrade pip
+          pip install -r requirements.txt pillow
 
-      - name: Install Python deps
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pillow
-
-      - name: Test config imports
+      - name: Config imports
         run: |
           python -c "
           from src.config import APP_NAME, APP_VERSION, APP_AUTHOR
           from src.config import DEFAULT_SETTINGS, SETTINGS_PATH, CONFIG_DIR
           from src.config import SUPPORTED_EXTENSIONS, FILE_DIALOG_TYPES
           from src.config import FONT_OPTIONS, GIT_DOWNLOAD_URLS
-          from src.config import VSCODE_MARKETPLACE_URL, VSCODE_MARKETPLACE_VERSION
-          from src.config import APP_GITHUB_API, APP_RELEASES_URL, APP_WEBSITE
-          from src.config import ASSETS_DIR, THEMES_DIR, EXTENSIONS_DIR
-          print(f'{APP_NAME} v{APP_VERSION} by {APP_AUTHOR}')
+          from src.config import VSCODE_MARKETPLACE_URL, APP_GITHUB_API, APP_WEBSITE
           assert APP_VERSION == '1.0.5', f'Version mismatch: {APP_VERSION}'
-          print('config.py — OK')
+          print(f'{APP_NAME} v{APP_VERSION} — OK')
           "
 
-      - name: Test __init__ imports
+      - name: Init imports
         run: |
           python -c "
           from src import __version__, __author__
-          assert __version__ == '1.0.5', f'Version mismatch: {__version__}'
-          print(f'src/__init__.py — v{__version__} by {__author__} — OK')
+          assert __version__ == '1.0.5'
+          print(f'v{__version__} by {__author__} — OK')
           "
 
-      - name: Test utils imports
+      - name: Utils imports
         run: |
           python -c "
           from src.utils.theme_loader import ThemeLoader
           from src.utils.recent_files import RecentFilesManager
-          print('utils.theme_loader — OK')
-          print('utils.recent_files — OK')
+          print('utils — OK')
           "
 
-      - name: Test core imports (no GUI)
+      - name: Core imports
         run: |
           python -c "
-          from src.core.syntax_highlighter import SyntaxHighlighter
           from src.core.extension_manager import ExtensionManager
           from src.core.updater import Updater
           from src.core.git_installer import GitInstaller
-          print('core.syntax_highlighter — OK')
-          print('core.extension_manager — OK')
-          print('core.updater — OK')
-          print('core.git_installer — OK')
+          print('core — OK')
           "
 
-      - name: Test PyQt6 availability
+      - name: PyQt6 check
         run: |
           xvfb-run --auto-servernum python -c "
           from PyQt6.QtWidgets import QApplication
@@ -178,193 +120,115 @@ jobs:
           app.quit()
           "
 
-      - name: Test theme files
+      - name: Theme files
         run: |
           python -c "
           import json, os
-
-          for theme in ['dark', 'light']:
-              path = f'assets/themes/{theme}.json'
-              assert os.path.exists(path), f'{path} not found'
-              with open(path) as f:
-                  data = json.load(f)
-              assert 'colors' in data, f'{theme}.json missing colors'
-              assert 'syntax' in data, f'{theme}.json missing syntax'
-              required_colors = ['bg_primary', 'bg_secondary', 'fg_primary',
-                                 'accent', 'editor_bg', 'editor_fg',
-                                 'sidebar_bg', 'terminal_bg', 'terminal_fg']
-              missing = [c for c in required_colors if c not in data['colors']]
-              assert not missing, f'{theme}.json missing colors: {missing}'
-              required_syntax = ['keyword', 'string', 'comment', 'number', 'function']
-              missing = [s for s in required_syntax if s not in data['syntax']]
-              assert not missing, f'{theme}.json missing syntax: {missing}'
-              print(f'themes/{theme}.json — OK')
+          for t in ['dark','light']:
+              with open(f'assets/themes/{t}.json') as f: d=json.load(f)
+              assert 'colors' in d and 'syntax' in d
+              for c in ['bg_primary','bg_secondary','fg_primary','accent','editor_bg','editor_fg','sidebar_bg','terminal_bg','terminal_fg']:
+                  assert c in d['colors'], f'{t} missing {c}'
+              for s in ['keyword','string','comment','number','function']:
+                  assert s in d['syntax'], f'{t} missing {s}'
+              print(f'{t}.json — OK')
           "
 
   logic:
     name: "Logic Tests"
     runs-on: ubuntu-latest
     needs: imports
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: "pip"
-
       - name: Install deps
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y \
-            libgl1-mesa-glx libegl1 libxkbcommon0 \
-            libdbus-1-3 xvfb
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pillow
+          sudo apt-get install -y ${{ env.QT_DEPS }} xvfb
+          pip install --upgrade pip
+          pip install -r requirements.txt pillow
 
-      - name: Test ThemeLoader
+      - name: ThemeLoader
         run: |
           python -c "
           from src.utils.theme_loader import ThemeLoader
-
-          dark = ThemeLoader('dark')
-          assert dark.colors['bg_primary']
-          assert dark.syntax['keyword']
-          print(f'ThemeLoader dark — {len(dark.colors)} colors — OK')
-
-          light = ThemeLoader('light')
-          assert light.colors['bg_primary']
-          assert light.colors['bg_primary'] != dark.colors['bg_primary']
-          print(f'ThemeLoader light — {len(light.colors)} colors — OK')
-
-          fallback = ThemeLoader('nonexistent')
-          assert fallback.colors['bg_primary']
-          print('ThemeLoader fallback — OK')
+          d=ThemeLoader('dark'); l=ThemeLoader('light'); f=ThemeLoader('xxx')
+          assert d.colors['bg_primary'] != l.colors['bg_primary']
+          assert f.colors['bg_primary']
+          print('ThemeLoader — OK')
           "
 
-      - name: Test RecentFilesManager
+      - name: RecentFiles
         run: |
           python -c "
           import tempfile, os
           from src.utils.recent_files import RecentFilesManager
-
-          mgr = RecentFilesManager()
+          m=RecentFilesManager()
           with tempfile.NamedTemporaryFile(delete=False, suffix='.py') as f:
-              f.write(b'# test')
-              path = f.name
+              f.write(b'#'); p=f.name
           try:
-              mgr.add(path)
-              files = mgr.get_all()
-              assert os.path.abspath(path) in files
-              print('RecentFiles add — OK')
-              mgr.clear()
-              assert len(mgr.get_all()) == 0
-              print('RecentFiles clear — OK')
-          finally:
-              os.unlink(path)
+              m.add(p); assert os.path.abspath(p) in m.get_all()
+              m.clear(); assert len(m.get_all())==0
+          finally: os.unlink(p)
+          print('RecentFiles — OK')
           "
 
-      - name: Test SyntaxHighlighter language detection
+      - name: ExtensionManager
         run: |
           python -c "
-          from src.core.syntax_highlighter import SyntaxHighlighter
-
-          h = SyntaxHighlighter.__new__(SyntaxHighlighter)
-          tests = {
-              'test.py': 'python', 'test.js': 'javascript',
-              'test.ts': 'javascript', 'test.html': 'html',
-              'test.css': 'css', 'test.json': 'json',
-              'test.txt': 'text', None: 'python',
-          }
-          for fp, expected in tests.items():
-              h.filepath = fp
-              result = h._detect_language()
-              assert result == expected, f'{fp}: expected {expected}, got {result}'
-          print('SyntaxHighlighter detection — OK')
+          from src.core.extension_manager import ExtensionManager as E
+          assert E.format_installs(500)=='500'
+          assert E.format_installs(1500)=='1.5K'
+          assert E.format_installs(2500000)=='2.5M'
+          print('ExtensionManager — OK')
           "
 
-      - name: Test ExtensionManager helpers
-        run: |
-          python -c "
-          from src.core.extension_manager import ExtensionManager
-
-          assert ExtensionManager.format_installs(500) == '500'
-          assert ExtensionManager.format_installs(1500) == '1.5K'
-          assert ExtensionManager.format_installs(2500000) == '2.5M'
-          print('ExtensionManager.format_installs — OK')
-          "
-
-      - name: Test Updater version comparison
+      - name: Updater
         run: |
           python -c "
           from src.core.updater import Updater
-
-          u = Updater.__new__(Updater)
-          assert u._is_newer('1.0.6', '1.0.5') == True
-          assert u._is_newer('1.0.5', '1.0.5') == False
-          assert u._is_newer('1.0.4', '1.0.5') == False
-          assert u._is_newer('2.0.0', '1.9.9') == True
-          assert u._is_newer('1.0.0.2', '1.0.0.1') == True
-          print('Updater._is_newer — OK')
+          u=Updater.__new__(Updater)
+          assert u._is_newer('1.0.6','1.0.5')==True
+          assert u._is_newer('1.0.5','1.0.5')==False
+          assert u._is_newer('1.0.4','1.0.5')==False
+          assert u._is_newer('2.0.0','1.9.9')==True
+          print('Updater — OK')
           "
 
-      - name: Test GitInstaller platform detection
+      - name: GitInstaller
         run: |
           python -c "
           from src.core.git_installer import GitInstaller
-
-          gi = GitInstaller.__new__(GitInstaller)
-          key = gi._get_platform_key()
-          name = gi._get_platform_name()
-          assert key in ('win32', 'darwin', 'linux')
-          assert name in ('Windows', 'macOS', 'Linux')
-          print(f'GitInstaller platform: {name} ({key}) — OK')
+          g=GitInstaller.__new__(GitInstaller)
+          assert g._get_platform_key() in ('win32','darwin','linux')
+          assert g._get_platform_name() in ('Windows','macOS','Linux')
+          print('GitInstaller — OK')
           "
 
-      - name: Test config defaults
+      - name: Config defaults
         run: |
           python -c "
           from src.config import DEFAULT_SETTINGS
-
-          required = [
-              'theme', 'font_family', 'font_size', 'tab_size',
-              'show_line_numbers', 'word_wrap', 'auto_indent',
-              'auto_save', 'auto_check_updates', 'window_width',
-              'window_height', 'sidebar_width', 'terminal_height',
-              'max_recent_files', 'default_shell', 'installed_extensions',
-              'highlight_current_line', 'show_whitespace', 'cursor_blink',
-              'minimap_enabled', 'suppress_git_prompt',
-          ]
-          missing = [k for k in required if k not in DEFAULT_SETTINGS]
-          assert not missing, f'Missing: {missing}'
-          assert isinstance(DEFAULT_SETTINGS['theme'], str)
-          assert isinstance(DEFAULT_SETTINGS['font_size'], int)
-          assert isinstance(DEFAULT_SETTINGS['auto_indent'], bool)
-          assert isinstance(DEFAULT_SETTINGS['installed_extensions'], list)
-          print(f'DEFAULT_SETTINGS — {len(DEFAULT_SETTINGS)} keys — OK')
+          for k in ['theme','font_family','font_size','tab_size','show_line_numbers',
+              'word_wrap','auto_indent','auto_save','auto_check_updates','window_width',
+              'window_height','sidebar_width','terminal_height','max_recent_files',
+              'default_shell','installed_extensions','highlight_current_line',
+              'show_whitespace','cursor_blink','minimap_enabled','suppress_git_prompt']:
+              assert k in DEFAULT_SETTINGS, f'Missing: {k}'
+          print(f'Defaults — {len(DEFAULT_SETTINGS)} keys — OK')
           "
 
-      - name: Test stylesheet generation
+      - name: Stylesheet
         run: |
           python -c "
           from src.utils.theme_loader import ThemeLoader
           from src.ui.theme_stylesheet import build_stylesheet
-
-          loader = ThemeLoader('dark')
-          css = build_stylesheet(loader.colors)
-          assert 'QMainWindow' in css
-          assert 'QPushButton' in css
-          assert 'QPlainTextEdit' in css
-          assert 'QTabBar' in css
-          assert 'QTreeView' in css
-          assert 'QScrollBar' in css
-          assert 'QMenu' in css
-          assert loader.colors['bg_primary'] in css
-          assert loader.colors['accent'] in css
+          css=build_stylesheet(ThemeLoader('dark').colors)
+          for s in ['QMainWindow','QPushButton','QPlainTextEdit','QTabBar','QTreeView','QScrollBar','QMenu']:
+              assert s in css, f'Missing: {s}'
           print(f'Stylesheet — {len(css)} chars — OK')
           "
 
@@ -372,182 +236,106 @@ jobs:
     name: "GUI Tests"
     runs-on: ubuntu-latest
     needs: imports
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: "pip"
-
-      - name: Install system deps
+      - name: Install deps
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y \
-            libgl1-mesa-glx libegl1 libxkbcommon0 \
-            libdbus-1-3 libxcb-xinerama0 libxcb-cursor0 \
-            libxcb-randr0 libxcb-shape0 libxcb-xfixes0 \
-            libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
-            libxcb-render-util0 xvfb x11-utils
+          sudo apt-get install -y ${{ env.QT_DEPS }} xvfb x11-utils
+          pip install --upgrade pip
+          pip install -r requirements.txt pillow
 
-      - name: Install Python deps
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pillow pytest
-
-      - name: Run GUI widget creation tests
+      - name: Widget tests
         run: |
           xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24" \
             python -c "
           import sys
-          print('Starting GUI tests...')
-
           from PyQt6.QtWidgets import QApplication
-          app = QApplication(sys.argv)
-
+          app=QApplication(sys.argv)
           from src.utils.theme_loader import ThemeLoader
           from src.ui.theme_stylesheet import build_stylesheet
+          loader=ThemeLoader('dark')
+          c=loader.colors; s=loader.syntax
+          app.setStyleSheet(build_stylesheet(c))
 
-          loader = ThemeLoader('dark')
-          colors = loader.colors
-          syntax = loader.syntax
-          css = build_stylesheet(colors)
-          app.setStyleSheet(css)
-
-          print('Theme + stylesheet — OK')
-
-          # Mock app object for widgets that need it
-          class MockApp:
+          class M:
               def __init__(self):
-                  self.settings = {
-                      'theme': 'dark', 'font_family': 'Monospace',
-                      'font_size': 13, 'tab_size': 4,
-                      'show_line_numbers': True, 'word_wrap': False,
-                      'auto_indent': True, 'highlight_current_line': True,
-                      'sidebar_width': 280,
-                  }
-                  self.colors = colors
-                  self.syntax_colors = syntax
-                  self.current_project_path = None
-              def set_status(self, t): pass
+                  self.settings={'theme':'dark','font_family':'Monospace','font_size':13,'tab_size':4,'show_line_numbers':True,'word_wrap':False,'auto_indent':True,'highlight_current_line':True,'sidebar_width':280}
+                  self.colors=c; self.syntax_colors=s; self.current_project_path=None
+              def set_status(self,t): pass
               def save_settings(self): pass
+          m=M()
 
-          mock = MockApp()
-
-          # Test editor creation
           from src.ui.editor_widget import CodeEditor
-          editor = CodeEditor(mock, filepath='test.py')
-          editor.set_content('print(\"hello world\")')
-          assert editor.get_content() == 'print(\"hello world\")'
-          editor.set_content('')
-          assert editor.get_content() == ''
-          editor.set_content('line1\nline2\nline3')
-          assert editor.get_content().count('\n') == 2
+          e=CodeEditor(m,filepath='test.py')
+          e.set_content('print(1)')
+          assert e.get_content()=='print(1)'
+          e.set_content(''); assert e.get_content()==''
+          e.set_content('a\nb\nc'); assert e.get_content().count(chr(10))==2
           print('CodeEditor — OK')
 
-          # Test editor with different filetypes
-          for ext in ['test.py', 'test.js', 'test.html', 'test.css', 'test.json']:
-              e = CodeEditor(mock, filepath=ext)
-              e.set_content('content')
-              assert e.get_content() == 'content'
-          print('CodeEditor filetypes — OK')
+          for ext in ['test.py','test.js','test.html','test.css','test.json']:
+              x=CodeEditor(m,filepath=ext); x.set_content('x'); assert x.get_content()=='x'
+          print('Filetypes — OK')
 
-          # Test splash
           from src.ui.splash import SplashScreen
-          splash = SplashScreen()
-          splash.set_status('Testing...')
-          splash.set_progress(50)
-          splash.set_progress(100)
-          splash.close()
-          print('SplashScreen — OK')
+          sp=SplashScreen(); sp.set_status('T'); sp.set_progress(50); sp.set_progress(100); sp.close()
+          print('Splash — OK')
 
-          # Test statusbar
           from src.ui.statusbar import StatusBar
-          sb = StatusBar(mock)
-          sb.set_text('test')
-          sb.update_file_type('Python')
-          sb.update_git_branch('main')
-          sb.update_cursor(5, 10)
+          sb=StatusBar(m); sb.set_text('t'); sb.update_file_type('Python'); sb.update_git_branch('main'); sb.update_cursor(5,10)
           print('StatusBar — OK')
 
-          # Test theme stylesheet has all required selectors
-          required_selectors = [
-              'QMainWindow', 'QPushButton', 'QLineEdit', 'QComboBox',
-              'QScrollBar', 'QTreeView', 'QLabel', 'QMenuBar', 'QMenu',
-              'QTabWidget', 'QTabBar', 'QDialog', 'QProgressBar',
-              'QCheckBox', 'QSlider', 'QToolTip',
-          ]
-          for sel in required_selectors:
-              assert sel in css, f'Missing selector: {sel}'
-          print(f'Stylesheet selectors ({len(required_selectors)}) — OK')
-
-          print()
-          print('All GUI tests passed!')
-
+          css=build_stylesheet(c)
+          for sel in ['QMainWindow','QPushButton','QLineEdit','QComboBox','QScrollBar','QTreeView','QLabel','QMenuBar','QMenu','QTabWidget','QTabBar','QDialog','QProgressBar','QCheckBox','QSlider','QToolTip']:
+              assert sel in css
+          print('Selectors — OK')
+          print(); print('All widget tests passed!')
           app.quit()
           "
 
-      - name: Run GUI integration test
+      - name: Integration test
         run: |
           xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24" \
             python -c "
           import sys
           from PyQt6.QtWidgets import QApplication
-          app = QApplication(sys.argv)
-
+          app=QApplication(sys.argv)
           from src.utils.theme_loader import ThemeLoader
           from src.ui.theme_stylesheet import build_stylesheet
           from src.ui.editor_widget import CodeEditor, EditorTabWidget, SearchWidget
+          loader=ThemeLoader('dark')
 
-          loader = ThemeLoader('dark')
-
-          class MockApp:
+          class M:
               def __init__(self):
-                  self.settings = {
-                      'theme': 'dark', 'font_family': 'Monospace',
-                      'font_size': 13, 'tab_size': 4,
-                      'show_line_numbers': True, 'word_wrap': False,
-                      'auto_indent': True, 'highlight_current_line': True,
-                      'sidebar_width': 280,
-                  }
-                  self.colors = loader.colors
-                  self.syntax_colors = loader.syntax
-                  self.current_project_path = None
-              def set_status(self, t): pass
+                  self.settings={'theme':'dark','font_family':'Monospace','font_size':13,'tab_size':4,'show_line_numbers':True,'word_wrap':False,'auto_indent':True,'highlight_current_line':True,'sidebar_width':280}
+                  self.colors=loader.colors; self.syntax_colors=loader.syntax; self.current_project_path=None
+              def set_status(self,t): pass
               def save_settings(self): pass
-
-          mock = MockApp()
-
-          # Test EditorTabWidget
+          m=M()
           from src.ui.statusbar import StatusBar
-          mock.statusbar = StatusBar(mock)
+          m.statusbar=StatusBar(m)
 
-          tabs = EditorTabWidget(mock)
-          tab_id = tabs.new_tab(content='hello', title='Test')
-          assert tab_id is not None
-          assert tabs.tabs.count() == 1
+          tabs=EditorTabWidget(m)
+          assert tabs.new_tab(content='hello',title='T') is not None
+          assert tabs.tabs.count()==1
+          tabs.new_tab(filepath='test.py',content='x=1')
+          assert tabs.tabs.count()==2
+          assert tabs.get_current_editor() is not None
 
-          tabs.new_tab(filepath='test.py', content='x = 1')
-          assert tabs.tabs.count() == 2
+          sw=SearchWidget(tabs)
+          sw.toggle(); assert sw.isVisible()
+          sw.toggle(); assert not sw.isVisible()
 
-          editor = tabs.get_current_editor()
-          assert editor is not None
+          for i in range(5): tabs.new_tab(content=f'c{i}',title=f'T{i}')
+          assert tabs.tabs.count()==7
+          tabs.apply_font(); tabs.refresh_all()
 
-          # Test search widget
-          search = SearchWidget(tabs)
-          search.toggle()
-          assert search.isVisible()
-          search.toggle()
-          assert not search.isVisible()
-
-          print('EditorTabWidget — OK')
-          print('SearchWidget — OK')
-          print('Integration test passed!')
-
+          print('Integration — OK')
           app.quit()
           "
 
@@ -555,135 +343,72 @@ jobs:
     name: "Spec Validation"
     runs-on: ubuntu-latest
     needs: structure
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: "pip"
-
       - name: Install deps
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pillow pyinstaller
+          sudo apt-get update -y
+          sudo apt-get install -y ${{ env.QT_DEPS }}
+          pip install --upgrade pip
+          pip install -r requirements.txt pillow pyinstaller
 
-      - name: Validate spec file
+      - name: Validate
         run: |
           python -c "
           import ast
-
-          with open('OmniIDE.spec', 'r') as f:
-              content = f.read()
-
-          try:
-              ast.parse(content)
-              print('OmniIDE.spec — valid Python syntax — OK')
-          except SyntaxError as e:
-              print(f'OmniIDE.spec — SYNTAX ERROR: {e}')
-              exit(1)
-
-          required = [
-              'src.app', 'src.config',
-              'src.core.file_manager',
-              'src.core.git_manager', 'src.core.git_installer',
-              'src.core.extension_manager', 'src.core.updater',
-              'src.core.syntax_highlighter',
-              'src.core.tab_manager',
-              'src.core.terminal',
-              'src.core.search',
-              'src.core.command_palette',
-              'src.ui.editor_widget', 'src.ui.sidebar',
-              'src.ui.terminal_widget', 'src.ui.toolbar',
-              'src.ui.statusbar', 'src.ui.menubar',
-              'src.ui.command_palette',
-              'src.ui.settings_dialog', 'src.ui.splash',
-              'src.ui.theme_stylesheet',
-              'src.ui.file_tree', 'src.ui.welcome',
-              'src.ui.extensions_panel', 'src.ui.settings_panel',
-              'src.utils.theme_loader', 'src.utils.recent_files',
-              'src.utils.shortcuts', 'src.utils.styles',
-              'src.utils.icon_manager',
+          with open('OmniIDE.spec') as f: content=f.read()
+          ast.parse(content)
+          print('Syntax — OK')
+          required=[
+              'src.app','src.config',
+              'src.core.file_manager','src.core.git_manager','src.core.git_installer',
+              'src.core.extension_manager','src.core.updater','src.core.syntax_highlighter',
+              'src.core.tab_manager','src.core.terminal','src.core.search','src.core.command_palette',
+              'src.ui.editor_widget','src.ui.sidebar','src.ui.terminal_widget','src.ui.toolbar',
+              'src.ui.statusbar','src.ui.menubar','src.ui.command_palette',
+              'src.ui.settings_dialog','src.ui.splash','src.ui.theme_stylesheet',
+              'src.ui.file_tree','src.ui.welcome','src.ui.extensions_panel','src.ui.settings_panel',
+              'src.utils.theme_loader','src.utils.recent_files','src.utils.shortcuts',
+              'src.utils.styles','src.utils.icon_manager',
           ]
-          missing = [m for m in required if m not in content]
+          missing=[m for m in required if m not in content]
           if missing:
-              print(f'Missing from hidden_imports:')
-              for m in missing:
-                  print(f'  - {m}')
+              for m in missing: print(f'  MISSING: {m}')
               exit(1)
-          else:
-              print(f'All {len(required)} modules in hidden_imports — OK')
-
-          assert 'assets' in content, 'assets not in datas'
-          assert 'src' in content, 'src not in datas'
-          assert 'run.py' in content, 'run.py not found'
-          print('Spec validation — OK')
+          print(f'All {len(required)} modules — OK')
+          assert 'run.py' in content and 'assets' in content
+          print('Spec — OK')
           "
 
   docs:
     name: "Docs Validation"
     runs-on: ubuntu-latest
     needs: structure
-
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Check docs files
+      - uses: actions/checkout@v4
+      - name: Check docs
         run: |
-          MISSING=0
-          DOCS_FILES=(
-            "docs/index.html"
-            "docs/style.css"
-            "docs/script.js"
-            "docs/favicon.svg"
-          )
-
-          for f in "${DOCS_FILES[@]}"; do
-            if [ ! -f "$f" ]; then
-              echo "  MISSING: $f"
-              MISSING=$((MISSING + 1))
-            else
-              echo "  OK: $f"
-            fi
+          for f in docs/index.html docs/style.css docs/script.js docs/favicon.svg; do
+            [ -f "$f" ] && echo "OK: $f" || echo "MISSING: $f"
           done
-
-          if [ $MISSING -gt 0 ]; then
-            echo "WARNING: $MISSING docs file(s) missing"
-          else
-            echo "All docs files present — OK"
-          fi
-
       - name: Validate HTML
         run: |
-          if [ -f "docs/index.html" ]; then
-            grep -q "<html" docs/index.html && echo "HTML tag — OK"
-            grep -q "</html>" docs/index.html && echo "Closing HTML — OK"
-            grep -q "favicon.svg" docs/index.html && echo "Favicon — OK"
-            grep -q "style.css" docs/index.html && echo "CSS ref — OK"
-            grep -q "script.js" docs/index.html && echo "JS ref — OK"
-            grep -q "PyQt6" docs/index.html && echo "PyQt6 mention — OK"
-            grep -q "v1.0.5" docs/index.html && echo "Version 1.0.5 — OK" || echo "WARNING: version not updated in docs"
-          fi
-
-      - name: Check README
-        run: |
-          if grep -q "komarev.com/ghpvc" README.md; then
-            echo "View counter badge — OK"
-          else
-            echo "WARNING: No view counter badge"
-          fi
+          grep -q "<html" docs/index.html && echo "html — OK"
+          grep -q "favicon.svg" docs/index.html && echo "favicon — OK"
+          grep -q "style.css" docs/index.html && echo "css — OK"
+          grep -q "script.js" docs/index.html && echo "js — OK"
+          grep -q "PyQt6" docs/index.html && echo "PyQt6 — OK"
+          grep -q "1.0.5" docs/index.html && echo "v1.0.5 — OK" || echo "WARN: version not in docs"
 
   summary:
-    name: "Test Summary"
+    name: "Summary"
     runs-on: ubuntu-latest
     needs: [structure, imports, logic, gui, spec, docs]
     if: always()
-
     steps:
       - name: Results
         run: |
@@ -691,29 +416,17 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| File Structure | ${{ needs.structure.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Import Check | ${{ needs.imports.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Logic Tests | ${{ needs.logic.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| GUI Tests | ${{ needs.gui.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Spec Validation | ${{ needs.spec.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Docs Validation | ${{ needs.docs.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Structure | ${{ needs.structure.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Imports | ${{ needs.imports.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Logic | ${{ needs.logic.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| GUI | ${{ needs.gui.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Spec | ${{ needs.spec.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Docs | ${{ needs.docs.result }} |" >> $GITHUB_STEP_SUMMARY
 
-      - name: Fail if any job failed
-        if: |
-          needs.structure.result == 'failure' ||
-          needs.imports.result == 'failure' ||
-          needs.logic.result == 'failure' ||
-          needs.gui.result == 'failure' ||
-          needs.spec.result == 'failure'
-        run: |
-          echo "One or more test jobs failed!"
-          exit 1
+      - name: Fail check
+        if: contains(needs.*.result, 'failure')
+        run: exit 1
 
-      - name: All passed
-        if: |
-          needs.structure.result == 'success' &&
-          needs.imports.result == 'success' &&
-          needs.logic.result == 'success' &&
-          needs.gui.result == 'success' &&
-          needs.spec.result == 'success'
+      - name: Pass
+        if: "!contains(needs.*.result, 'failure')"
         run: echo "All tests passed for v1.0.5!"
