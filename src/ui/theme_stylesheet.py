@@ -44,9 +44,14 @@ def build_stylesheet(c):
     QTabBar::tab:hover {{
         background-color: {c['bg_tertiary']};
     }}
-    QTabBar::close-button {{
-        image: none;
-        subcontrol-position: right;
+
+    /* ── Editor ── */
+    QPlainTextEdit {{
+        background-color: {c['editor_bg']};
+        color: {c['editor_fg']};
+        border: none;
+        selection-background-color: {c['selection']};
+        padding: 4px;
     }}
 
     /* ── Buttons ── */
@@ -67,7 +72,6 @@ def build_stylesheet(c):
     QPushButton:pressed {{
         background-color: {c['accent_hover']};
     }}
-
     QPushButton[cssClass="primary"] {{
         background-color: {c['accent']};
         color: {c['bg_primary']};
@@ -76,19 +80,16 @@ def build_stylesheet(c):
     QPushButton[cssClass="primary"]:hover {{
         background-color: {c['accent_hover']};
     }}
-
     QPushButton[cssClass="success"] {{
         background-color: {c['success']};
         color: {c['bg_primary']};
         border-color: {c['success']};
     }}
-
     QPushButton[cssClass="danger"] {{
         background-color: {c['error']};
         color: {c['bg_primary']};
         border-color: {c['error']};
     }}
-
     QPushButton[cssClass="icon"] {{
         background-color: transparent;
         border: none;
@@ -99,7 +100,7 @@ def build_stylesheet(c):
         background-color: {c['bg_tertiary']};
     }}
 
-    /* ── Line Edit / Input ── */
+    /* ── Line Edit ── */
     QLineEdit {{
         background-color: {c['bg_tertiary']};
         color: {c['fg_primary']};
@@ -204,7 +205,6 @@ def build_stylesheet(c):
         font-weight: bold;
         font-size: 9pt;
         color: {c['fg_secondary']};
-        text-transform: uppercase;
     }}
 
     /* ── Separator ── */

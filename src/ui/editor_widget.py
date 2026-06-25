@@ -4,19 +4,19 @@ import os
 
 from PyQt6.QtWidgets import (
     QWidget, QTabWidget, QVBoxLayout, QHBoxLayout, QPlainTextEdit,
-    QLabel, QFrame, QLineEdit, QPushButton, QCheckBox,
+    QLabel, QFrame, QLineEdit, QPushButton, QCheckBox, QTextEdit,
 )
 from PyQt6.QtCore import Qt, QRect, QSize, QRegularExpression
 from PyQt6.QtGui import (
     QFont, QColor, QPainter, QTextFormat, QSyntaxHighlighter,
-    QTextCharFormat, QTextCursor, QKeySequence, QShortcut,
+    QTextCharFormat, QTextCursor,
 )
 
 from src.config import APP_NAME, APP_VERSION, APP_AUTHOR, SUPPORTED_EXTENSIONS
 
 
 class LineNumberArea(QWidget):
-    """Line number gutter for the editor."""
+    """Line number gutter."""
 
     def __init__(self, editor):
         super().__init__(editor)
@@ -41,7 +41,9 @@ class CodeEditor(QPlainTextEdit):
         font = QFont(app.settings["font_family"], app.settings["font_size"])
         font.setFixedPitch(True)
         self.setFont(font)
-        self.setTabStopDistance(app.settings["tab_size"] * self.fontMetrics().horizontalAdvance(" "))
+        self.setTabStopDistance(
+            app.settings["tab_size"] * self.fontMetrics().horizontalAdvance(" ")
+        )
 
         self.setLineWrapMode(
             QPlainTextEdit.LineWrapMode.WidgetWidth if app.settings["word_wrap"]
@@ -70,7 +72,9 @@ class CodeEditor(QPlainTextEdit):
         self.highlight_current_line()
 
         # Syntax highlighter
-        self.highlighter = SimpleSyntaxHighlighter(self.document(), app.syntax_colors, filepath)
+        self.highlighter = SimpleSyntaxHighlighter(
+            self.document(), app.syntax_colors, filepath
+        )
 
     def _on_text_changed(self):
         self.modified = True
@@ -86,14 +90,18 @@ class CodeEditor(QPlainTextEdit):
         if dy:
             self.line_number_area.scroll(0, dy)
         else:
-            self.line_number_area.update(0, rect.y(), self.line_number_area.width(), rect.height())
+            self.line_number_area.update(
+                0, rect.y(), self.line_number_area.width(), rect.height()
+            )
         if rect.contains(self.viewport().rect()):
             self.update_line_number_area_width(0)
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
         cr = self.contentsRect()
-        self.line_number_area.setGeometry(QRect(cr.left(), cr.top(), self.line_number_area_width(), cr.height()))
+        self.line_number_area.setGeometry(
+            QRect(cr.left(), cr.top(), self.line_number_area_width(), cr.height())
+        )
 
     def line_number_area_paint_event(self, event):
         painter = QPainter(self.line_number_area)
@@ -102,7 +110,9 @@ class CodeEditor(QPlainTextEdit):
 
         block = self.firstVisibleBlock()
         block_number = block.blockNumber()
-        top = round(self.blockBoundingGeometry(block).translated(self.contentOffset()).top())
+        top = round(
+            self.blockBoundingGeometry(block).translated(self.contentOffset()).top()
+        )
         bottom = top + round(self.blockBoundingRect(block).height())
 
         while block.isValid() and top <= event.rect().bottom():
@@ -111,7 +121,8 @@ class CodeEditor(QPlainTextEdit):
                 painter.setPen(QColor(c["fg_secondary"]))
                 painter.setFont(self.font())
                 painter.drawText(
-                    0, top, self.line_number_area.width() - 6,
+                    0, top,
+                    self.line_number_area.width() - 6,
                     self.fontMetrics().height(),
                     Qt.AlignmentFlag.AlignRight, number,
                 )
@@ -125,14 +136,20 @@ class CodeEditor(QPlainTextEdit):
     def highlight_current_line(self):
         if not self.app.settings.get("highlight_current_line", True):
             return
+
         extra_selections = []
-        selection = QPlainTextEdit.ExtraSelection()
+
+        # Use QTextEdit.ExtraSelection — PyQt6 requires this import path
+        selection = QTextEdit.ExtraSelection()
         color = QColor(self.app.colors.get("line_highlight", "#252536"))
         selection.format.setBackground(color)
-        selection.format.setProperty(QTextFormat.Property.FullWidthSelection, True)
+        selection.format.setProperty(
+            QTextFormat.Property.FullWidthSelection, True
+        )
         selection.cursor = self.textCursor()
         selection.cursor.clearSelection()
         extra_selections.append(selection)
+
         self.setExtraSelections(extra_selections)
 
     def get_content(self):
@@ -161,6 +178,7 @@ class CodeEditor(QPlainTextEdit):
         if event.key() == Qt.Key.Key_Tab:
             self.insertPlainText(" " * self.app.settings["tab_size"])
             return
+
         if event.key() == Qt.Key.Key_Return:
             cursor = self.textCursor()
             line = cursor.block().text()
@@ -175,6 +193,7 @@ class CodeEditor(QPlainTextEdit):
             super().keyPressEvent(event)
             self.insertPlainText(indent)
             return
+
         super().keyPressEvent(event)
 
 
@@ -249,7 +268,9 @@ class SimpleSyntaxHighlighter(QSyntaxHighlighter):
                 fmt.setFontWeight(QFont.Weight.Bold)
             regex = QRegularExpression(pattern)
             if token_type == "comment":
-                regex = QRegularExpression(pattern, QRegularExpression.PatternOption.MultilineOption)
+                regex = QRegularExpression(
+                    pattern, QRegularExpression.PatternOption.MultilineOption
+                )
             self.highlight_rules.append((regex, fmt))
 
     def update_colors(self, syntax_colors):
@@ -262,7 +283,9 @@ class SimpleSyntaxHighlighter(QSyntaxHighlighter):
             iterator = regex.globalMatch(text)
             while iterator.hasNext():
                 match = iterator.next()
-                self.setFormat(match.capturedStart(), match.capturedLength(), fmt)
+                self.setFormat(
+                    match.capturedStart(), match.capturedLength(), fmt
+                )
 
 
 class SearchWidget(QWidget):
@@ -280,6 +303,7 @@ class SearchWidget(QWidget):
         # Find row
         find_row = QHBoxLayout()
         find_row.addWidget(QLabel("Find:"))
+
         self.find_input = QLineEdit()
         self.find_input.setPlaceholderText("Search...")
         self.find_input.returnPressed.connect(self.find_next)
@@ -314,6 +338,7 @@ class SearchWidget(QWidget):
         # Replace row
         replace_row = QHBoxLayout()
         replace_row.addWidget(QLabel("Replace:"))
+
         self.replace_input = QLineEdit()
         self.replace_input.setPlaceholderText("Replace with...")
         replace_row.addWidget(self.replace_input, 1)
@@ -343,21 +368,17 @@ class SearchWidget(QWidget):
         if not editor:
             self.match_label.setText("")
             return
+
         query = self.find_input.text()
         if not query:
             self.match_label.setText("")
             return
 
-        flags = QTextCursor.MoveOperation.Start
-        count = 0
-        cursor = editor.textCursor()
-        cursor.movePosition(QTextCursor.MoveOperation.Start)
-        editor.setTextCursor(cursor)
-
-        find_flags = QPlainTextEdit.FindFlag(0)
+        find_flags = QTextEdit.FindFlag(0)
         if self.case_check.isChecked():
-            find_flags |= QPlainTextEdit.FindFlag.FindCaseSensitively
+            find_flags |= QTextEdit.FindFlag.FindCaseSensitively
 
+        count = 0
         temp_cursor = QTextCursor(editor.document())
         while True:
             temp_cursor = editor.document().find(query, temp_cursor, find_flags)
@@ -365,7 +386,9 @@ class SearchWidget(QWidget):
                 break
             count += 1
 
-        self.match_label.setText(f"{count} match{'es' if count != 1 else ''}")
+        self.match_label.setText(
+            f"{count} match{'es' if count != 1 else ''}"
+        )
 
     def find_next(self):
         self._find(forward=True)
@@ -377,24 +400,25 @@ class SearchWidget(QWidget):
         editor = self.editor_tabs.get_current_editor()
         if not editor:
             return
+
         query = self.find_input.text()
         if not query:
             return
 
-        flags = QPlainTextEdit.FindFlag(0)
+        find_flags = QTextEdit.FindFlag(0)
         if self.case_check.isChecked():
-            flags |= QPlainTextEdit.FindFlag.FindCaseSensitively
+            find_flags |= QTextEdit.FindFlag.FindCaseSensitively
         if not forward:
-            flags |= QPlainTextEdit.FindFlag.FindBackward
+            find_flags |= QTextEdit.FindFlag.FindBackward
 
-        if not editor.find(query, flags):
+        if not editor.find(query, find_flags):
             cursor = editor.textCursor()
             if forward:
                 cursor.movePosition(QTextCursor.MoveOperation.Start)
             else:
                 cursor.movePosition(QTextCursor.MoveOperation.End)
             editor.setTextCursor(cursor)
-            editor.find(query, flags)
+            editor.find(query, find_flags)
 
     def replace_one(self):
         editor = self.editor_tabs.get_current_editor()
@@ -409,10 +433,12 @@ class SearchWidget(QWidget):
         editor = self.editor_tabs.get_current_editor()
         if not editor:
             return
+
         query = self.find_input.text()
         replacement = self.replace_input.text()
         if not query:
             return
+
         text = editor.toPlainText()
         if self.case_check.isChecked():
             count = text.count(query)
@@ -420,7 +446,10 @@ class SearchWidget(QWidget):
         else:
             import re
             count = len(re.findall(re.escape(query), text, re.IGNORECASE))
-            text = re.sub(re.escape(query), replacement, text, flags=re.IGNORECASE)
+            text = re.sub(
+                re.escape(query), replacement, text, flags=re.IGNORECASE
+            )
+
         editor.setPlainText(text)
         self.editor_tabs.app.set_status(f"Replaced {count} occurrences")
 
@@ -485,7 +514,10 @@ class EditorTabWidget(QWidget):
             editor.set_content(content)
 
         if title is None:
-            title = os.path.basename(filepath) if filepath else f"Untitled-{self.tab_counter}"
+            title = (
+                os.path.basename(filepath) if filepath
+                else f"Untitled-{self.tab_counter}"
+            )
 
         idx = self.tabs.addTab(editor, title)
         self.tabs.setCurrentIndex(idx)
@@ -501,7 +533,10 @@ class EditorTabWidget(QWidget):
         return tab_id
 
     def get_current_editor(self):
-        return self.tabs.currentWidget()
+        widget = self.tabs.currentWidget()
+        if isinstance(widget, CodeEditor):
+            return widget
+        return None
 
     def close_current_tab(self):
         idx = self.tabs.currentIndex()
@@ -510,7 +545,7 @@ class EditorTabWidget(QWidget):
 
     def close_tab(self, index):
         editor = self.tabs.widget(index)
-        if editor and editor.modified:
+        if isinstance(editor, CodeEditor) and editor.modified:
             from PyQt6.QtWidgets import QMessageBox
             result = QMessageBox.question(
                 self, "Save?",
@@ -524,7 +559,6 @@ class EditorTabWidget(QWidget):
             elif result == QMessageBox.StandardButton.Cancel:
                 return
 
-        # Remove from editors dict
         tab_id = getattr(editor, "_tab_id", None)
         if tab_id and tab_id in self.editors:
             del self.editors[tab_id]
@@ -536,14 +570,19 @@ class EditorTabWidget(QWidget):
         self.search_widget.toggle()
 
     def apply_font(self):
-        font = QFont(self.app.settings["font_family"], self.app.settings["font_size"])
+        font = QFont(
+            self.app.settings["font_family"],
+            self.app.settings["font_size"],
+        )
         font.setFixedPitch(True)
+
         for i in range(self.tabs.count()):
             editor = self.tabs.widget(i)
             if isinstance(editor, CodeEditor):
                 editor.setFont(font)
                 editor.setTabStopDistance(
-                    self.app.settings["tab_size"] * editor.fontMetrics().horizontalAdvance(" ")
+                    self.app.settings["tab_size"]
+                    * editor.fontMetrics().horizontalAdvance(" ")
                 )
                 editor.update_line_number_area_width(0)
                 editor.line_number_area.update()
