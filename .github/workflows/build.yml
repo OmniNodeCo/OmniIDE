@@ -7,9 +7,10 @@ permissions:
   contents: read
 
 env:
+  QT_QPA_PLATFORM: offscreen
   QT_DEPS: >-
     libgl1 libglu1-mesa libegl1 libxkbcommon0
-    libdbus-1-3 libxcb-xinerama0 libxcb-cursor0
+    libdbus-1-3 libxcb-cursor0 libxcb-xinerama0
     libxcb-randr0 libxcb-shape0 libxcb-xfixes0
     libxcb-icccm4 libxcb-image0 libxcb-keysyms1
     libxcb-render-util0 libfontconfig1 libfreetype6
@@ -28,7 +29,7 @@ jobs:
       - name: Install deps
         run: |
           sudo apt-get update -y
-          sudo apt-get install -y ${{ env.QT_DEPS }} xvfb
+          sudo apt-get install -y ${{ env.QT_DEPS }}
           pip install --upgrade pip
           pip install -r requirements.txt pillow
       - name: Verify
@@ -48,38 +49,30 @@ jobs:
         with:
           python-version: "3.11"
           cache: "pip"
-      - name: Install deps
-        run: |
-          pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pyinstaller pillow
-      - name: Generate icon
+      - run: pip install --upgrade pip && pip install -r requirements.txt pyinstaller pillow
+      - name: Icon
         shell: python
         run: |
-          import os
-          from PIL import Image, ImageDraw
-          os.makedirs("assets", exist_ok=True)
-          sizes=[16,32,48,64,128,256]; images=[]
+          import os; from PIL import Image, ImageDraw
+          os.makedirs("assets",exist_ok=True); sizes=[16,32,48,64,128,256]; imgs=[]
           for s in sizes:
-              img=Image.new("RGBA",(s,s),(0,0,0,0)); d=ImageDraw.Draw(img)
-              m=s//8; d.ellipse([m,m,s-m,s-m],fill=(30,30,46,255))
-              rw=max(2,s//16); rm=s//5; d.ellipse([rm,rm,s-rm,s-rm],outline=(137,180,250,255),width=rw)
-              i=s//4; d.ellipse([i,i,s-i,s-i],outline=(203,166,247,200),width=max(1,s//20))
+              i=Image.new("RGBA",(s,s),(0,0,0,0)); d=ImageDraw.Draw(i); m=s//8
+              d.ellipse([m,m,s-m,s-m],fill=(30,30,46,255))
+              d.ellipse([s//5,s//5,s-s//5,s-s//5],outline=(137,180,250,255),width=max(2,s//16))
+              d.ellipse([s//4,s//4,s-s//4,s-s//4],outline=(203,166,247,200),width=max(1,s//20))
               c=s//2; dd=max(2,s//10); d.ellipse([c-dd,c-dd,c+dd,c+dd],fill=(245,194,231,255))
-              images.append(img)
-          images[0].save("assets/icon.ico",format="ICO",sizes=[(s,s) for s in sizes],append_images=images[1:])
-          images[-1].save("assets/icon.png",format="PNG")
+              imgs.append(i)
+          imgs[0].save("assets/icon.ico",format="ICO",sizes=[(s,s) for s in sizes],append_images=imgs[1:])
+          imgs[-1].save("assets/icon.png",format="PNG")
       - name: Patch spec
         shell: python
         run: |
-          with open("OmniIDE.spec","r") as f: c=f.read()
+          with open("OmniIDE.spec") as f: c=f.read()
           if "icon=" not in c:
               c=c.replace("entitlements_file=None,","entitlements_file=None,\n    icon='assets/icon.ico',")
               with open("OmniIDE.spec","w") as f: f.write(c)
-      - name: Build
-        run: pyinstaller OmniIDE.spec
-      - name: Verify
-        run: if (Test-Path "dist/OmniIDE.exe") { Write-Host "OK" } else { exit 1 }
+      - run: pyinstaller OmniIDE.spec
+      - run: if (Test-Path "dist/OmniIDE.exe") { Write-Host "OK" } else { exit 1 }
       - uses: actions/upload-artifact@v4
         with:
           name: OmniIDE-Windows-dev
@@ -96,34 +89,23 @@ jobs:
         with:
           python-version: "3.11"
           cache: "pip"
-      - name: Install deps
-        run: |
-          pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pyinstaller pillow
-      - name: Generate icon
+      - run: pip install --upgrade pip && pip install -r requirements.txt pyinstaller pillow
+      - name: Icon
         shell: python3 {0}
         run: |
-          import os
-          from PIL import Image, ImageDraw
-          os.makedirs("assets", exist_ok=True)
-          sizes=[16,32,48,64,128,256]; images=[]
+          import os; from PIL import Image, ImageDraw
+          os.makedirs("assets",exist_ok=True); sizes=[16,32,48,64,128,256]; imgs=[]
           for s in sizes:
-              img=Image.new("RGBA",(s,s),(0,0,0,0)); d=ImageDraw.Draw(img)
-              m=s//8; d.ellipse([m,m,s-m,s-m],fill=(30,30,46,255))
-              rw=max(2,s//16); rm=s//5; d.ellipse([rm,rm,s-rm,s-rm],outline=(137,180,250,255),width=rw)
-              i=s//4; d.ellipse([i,i,s-i,s-i],outline=(203,166,247,200),width=max(1,s//20))
+              i=Image.new("RGBA",(s,s),(0,0,0,0)); d=ImageDraw.Draw(i); m=s//8
+              d.ellipse([m,m,s-m,s-m],fill=(30,30,46,255))
+              d.ellipse([s//5,s//5,s-s//5,s-s//5],outline=(137,180,250,255),width=max(2,s//16))
+              d.ellipse([s//4,s//4,s-s//4,s-s//4],outline=(203,166,247,200),width=max(1,s//20))
               c=s//2; dd=max(2,s//10); d.ellipse([c-dd,c-dd,c+dd,c+dd],fill=(245,194,231,255))
-              images.append(img)
-          images[0].save("assets/icon.ico",format="ICO",sizes=[(s,s) for s in sizes],append_images=images[1:])
-          images[-1].save("assets/icon.png",format="PNG")
-      - name: Build
-        run: pyinstaller OmniIDE.spec
-      - name: Package
-        run: |
-          cd dist
-          if [ -d "OmniIDE.app" ]; then zip -r OmniIDE-macOS.zip OmniIDE.app
-          else chmod +x OmniIDE && zip -r OmniIDE-macOS.zip OmniIDE; fi
+              imgs.append(i)
+          imgs[0].save("assets/icon.ico",format="ICO",sizes=[(s,s) for s in sizes],append_images=imgs[1:])
+          imgs[-1].save("assets/icon.png",format="PNG")
+      - run: pyinstaller OmniIDE.spec
+      - run: cd dist && ([ -d OmniIDE.app ] && zip -r OmniIDE-macOS.zip OmniIDE.app || (chmod +x OmniIDE && zip -r OmniIDE-macOS.zip OmniIDE))
       - uses: actions/upload-artifact@v4
         with:
           name: OmniIDE-macOS-dev
@@ -140,33 +122,26 @@ jobs:
         with:
           python-version: "3.11"
           cache: "pip"
-      - name: Install deps
-        run: |
+      - run: |
           sudo apt-get update -y
           sudo apt-get install -y ${{ env.QT_DEPS }} binutils
-          pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pyinstaller pillow
-      - name: Generate icon
+          pip install --upgrade pip && pip install -r requirements.txt pyinstaller pillow
+      - name: Icon
         shell: python3 {0}
         run: |
-          import os
-          from PIL import Image, ImageDraw
-          os.makedirs("assets", exist_ok=True)
-          sizes=[16,32,48,64,128,256]; images=[]
+          import os; from PIL import Image, ImageDraw
+          os.makedirs("assets",exist_ok=True); sizes=[16,32,48,64,128,256]; imgs=[]
           for s in sizes:
-              img=Image.new("RGBA",(s,s),(0,0,0,0)); d=ImageDraw.Draw(img)
-              m=s//8; d.ellipse([m,m,s-m,s-m],fill=(30,30,46,255))
-              rw=max(2,s//16); rm=s//5; d.ellipse([rm,rm,s-rm,s-rm],outline=(137,180,250,255),width=rw)
-              i=s//4; d.ellipse([i,i,s-i,s-i],outline=(203,166,247,200),width=max(1,s//20))
+              i=Image.new("RGBA",(s,s),(0,0,0,0)); d=ImageDraw.Draw(i); m=s//8
+              d.ellipse([m,m,s-m,s-m],fill=(30,30,46,255))
+              d.ellipse([s//5,s//5,s-s//5,s-s//5],outline=(137,180,250,255),width=max(2,s//16))
+              d.ellipse([s//4,s//4,s-s//4,s-s//4],outline=(203,166,247,200),width=max(1,s//20))
               c=s//2; dd=max(2,s//10); d.ellipse([c-dd,c-dd,c+dd,c+dd],fill=(245,194,231,255))
-              images.append(img)
-          images[0].save("assets/icon.ico",format="ICO",sizes=[(s,s) for s in sizes],append_images=images[1:])
-          images[-1].save("assets/icon.png",format="PNG")
-      - name: Build
-        run: pyinstaller OmniIDE.spec
-      - name: Package
-        run: chmod +x dist/OmniIDE && cd dist && tar -czvf OmniIDE-Linux.tar.gz OmniIDE
+              imgs.append(i)
+          imgs[0].save("assets/icon.ico",format="ICO",sizes=[(s,s) for s in sizes],append_images=imgs[1:])
+          imgs[-1].save("assets/icon.png",format="PNG")
+      - run: pyinstaller OmniIDE.spec
+      - run: chmod +x dist/OmniIDE && cd dist && tar -czvf OmniIDE-Linux.tar.gz OmniIDE
       - uses: actions/upload-artifact@v4
         with:
           name: OmniIDE-Linux-dev
