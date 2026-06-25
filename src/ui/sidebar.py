@@ -4,11 +4,11 @@ import os
 
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QFrame, QTreeView, QFileSystemModel, QScrollArea,
+    QFrame, QTreeView, QScrollArea,
     QStackedWidget, QLineEdit, QMessageBox,
 )
 from PyQt6.QtCore import Qt, QDir, QModelIndex
-from PyQt6.QtGui import QFont
+from PyQt6.QtGui import QFont, QFileSystemModel
 
 from src.core.extension_manager import ExtensionManager
 
@@ -198,7 +198,9 @@ class ExtensionsPanel(SidebarPanel):
         # Results scroll area
         self.scroll = QScrollArea()
         self.scroll.setWidgetResizable(True)
-        self.scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.scroll.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
         self.results_widget = QWidget()
         self.results_layout = QVBoxLayout(self.results_widget)
         self.results_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
@@ -281,7 +283,9 @@ class ExtensionsPanel(SidebarPanel):
         # Description
         desc = ext_info.get("description", "")
         if desc:
-            desc_label = QLabel(desc[:120] + ("..." if len(desc) > 120 else ""))
+            desc_label = QLabel(
+                desc[:120] + ("..." if len(desc) > 120 else "")
+            )
             desc_label.setWordWrap(True)
             desc_label.setProperty("cssClass", "dim")
             card_layout.addWidget(desc_label)
@@ -289,7 +293,9 @@ class ExtensionsPanel(SidebarPanel):
         # Stats
         if mode == "marketplace":
             installs = ext_info.get("installs", 0)
-            stats = QLabel(f"Downloads: {ExtensionManager.format_installs(installs)}")
+            stats = QLabel(
+                f"Downloads: {ExtensionManager.format_installs(installs)}"
+            )
             stats.setProperty("cssClass", "dim")
             stats.setFont(QFont("Segoe UI", 8))
             card_layout.addWidget(stats)
@@ -298,17 +304,24 @@ class ExtensionsPanel(SidebarPanel):
         if mode == "marketplace":
             if ext_info.get("installed", False):
                 installed_label = QLabel("Installed")
-                installed_label.setStyleSheet(f"color: {self.app.colors.get('success', '#a6e3a1')}; font-weight: bold;")
+                installed_label.setStyleSheet(
+                    f"color: {self.app.colors.get('success', '#a6e3a1')}; "
+                    f"font-weight: bold;"
+                )
                 card_layout.addWidget(installed_label)
             else:
                 install_btn = QPushButton("Install")
                 install_btn.setProperty("cssClass", "success")
-                install_btn.clicked.connect(lambda checked, ei=ext_info: self._install(ei))
+                install_btn.clicked.connect(
+                    lambda checked, ei=ext_info: self._install(ei)
+                )
                 card_layout.addWidget(install_btn)
         else:
             uninstall_btn = QPushButton("Uninstall")
             uninstall_btn.setProperty("cssClass", "danger")
-            uninstall_btn.clicked.connect(lambda checked, ei=ext_info: self._uninstall(ei))
+            uninstall_btn.clicked.connect(
+                lambda checked, ei=ext_info: self._uninstall(ei)
+            )
             card_layout.addWidget(uninstall_btn)
 
         self.results_layout.addWidget(card)
@@ -338,7 +351,9 @@ class ExtensionsPanel(SidebarPanel):
         ext_id = ext_info.get("id", "")
         name = ext_info.get("name", ext_id)
 
-        result = QMessageBox.question(self, "Uninstall", f"Uninstall {name}?")
+        result = QMessageBox.question(
+            self, "Uninstall", f"Uninstall {name}?"
+        )
         if result != QMessageBox.StandardButton.Yes:
             return
 
@@ -374,12 +389,18 @@ class Sidebar(QWidget):
         btn_row.setSpacing(2)
 
         self.tab_buttons = {}
-        tabs = [("explorer", "Explorer"), ("git", "Git"), ("extensions", "Ext")]
+        tabs = [
+            ("explorer", "Explorer"),
+            ("git", "Git"),
+            ("extensions", "Ext"),
+        ]
 
         for tab_id, label in tabs:
             btn = QPushButton(label)
             btn.setCheckable(True)
-            btn.clicked.connect(lambda checked, t=tab_id: self._switch(t))
+            btn.clicked.connect(
+                lambda checked, t=tab_id: self._switch(t)
+            )
             btn_row.addWidget(btn)
             self.tab_buttons[tab_id] = btn
 
