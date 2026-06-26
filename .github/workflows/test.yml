@@ -14,6 +14,7 @@ permissions:
 
 env:
   QT_QPA_PLATFORM: offscreen
+  APP_VERSION_CHECK: "1.0.6"
   QT_DEPS: >-
     libgl1 libglu1-mesa libegl1 libxkbcommon0
     libdbus-1-3 libxcb-cursor0 libxcb-xinerama0
@@ -42,7 +43,7 @@ jobs:
             "src/ui/__init__.py" "src/ui/editor_widget.py" "src/ui/sidebar.py"
             "src/ui/terminal_widget.py" "src/ui/toolbar.py" "src/ui/statusbar.py"
             "src/ui/menubar.py" "src/ui/command_palette.py" "src/ui/settings_dialog.py"
-            "src/ui/splash.py" "src/ui/theme_stylesheet.py"
+            "src/ui/splash.py" "src/ui/theme_stylesheet.py" "src/ui/icons.py"
             "src/ui/file_tree.py" "src/ui/welcome.py"
             "src/ui/extensions_panel.py" "src/ui/settings_panel.py"
             "src/utils/__init__.py" "src/utils/theme_loader.py" "src/utils/recent_files.py"
@@ -80,7 +81,7 @@ jobs:
           from src.config import SUPPORTED_EXTENSIONS, FILE_DIALOG_TYPES
           from src.config import FONT_OPTIONS, GIT_DOWNLOAD_URLS
           from src.config import VSCODE_MARKETPLACE_URL, APP_GITHUB_API, APP_WEBSITE
-          assert APP_VERSION == '1.0.5', f'Version mismatch: {APP_VERSION}'
+          assert APP_VERSION == '${{ env.APP_VERSION_CHECK }}', f'Version mismatch: {APP_VERSION} != ${{ env.APP_VERSION_CHECK }}'
           print(f'{APP_NAME} v{APP_VERSION} — OK')
           "
 
@@ -88,7 +89,7 @@ jobs:
         run: |
           python -c "
           from src import __version__, __author__
-          assert __version__ == '1.0.5'
+          assert __version__ == '${{ env.APP_VERSION_CHECK }}', f'Version mismatch: {__version__}'
           print(f'v{__version__} by {__author__} — OK')
           "
 
@@ -115,9 +116,24 @@ jobs:
           from PyQt6.QtWidgets import QApplication
           from PyQt6.QtCore import Qt
           from PyQt6.QtGui import QFont
+          from PyQt6.QtSvg import QSvgRenderer
           app = QApplication([])
-          print('PyQt6 — OK')
+          print('PyQt6 + QtSvg — OK')
           app.quit()
+          "
+
+      - name: Icons module
+        run: |
+          python -c "
+          from src.ui.icons import SVGS, svg_icon
+          assert len(SVGS) > 15, f'Only {len(SVGS)} icons'
+          required = ['files','git','extensions','new_file','open_file','save',
+                      'search','settings','theme','terminal','palette',
+                      'clone','commit','push','pull','diff','branch','log',
+                      'status','stage','remote','install','uninstall','refresh']
+          missing = [i for i in required if i not in SVGS]
+          assert not missing, f'Missing icons: {missing}'
+          print(f'{len(SVGS)} SVG icons — OK')
           "
 
       - name: Theme files
@@ -191,9 +207,9 @@ jobs:
           python -c "
           from src.core.updater import Updater
           u=Updater.__new__(Updater)
-          assert u._is_newer('1.0.6','1.0.5')==True
-          assert u._is_newer('1.0.5','1.0.5')==False
-          assert u._is_newer('1.0.4','1.0.5')==False
+          assert u._is_newer('1.0.7','1.0.6')==True
+          assert u._is_newer('1.0.6','1.0.6')==False
+          assert u._is_newer('1.0.5','1.0.6')==False
           assert u._is_newer('2.0.0','1.9.9')==True
           print('Updater — OK')
           "
@@ -291,8 +307,14 @@ jobs:
           sb=StatusBar(m); sb.set_text('t'); sb.update_file_type('Python'); sb.update_git_branch('main'); sb.update_cursor(5,10)
           print('StatusBar — OK')
 
+          from src.ui.icons import SVGS, svg_icon
+          for name in SVGS:
+              icon = svg_icon(name, 16)
+              assert not icon.isNull(), f'Icon {name} is null'
+          print(f'All {len(SVGS)} SVG icons render — OK')
+
           css=build_stylesheet(c)
-          for sel in ['QMainWindow','QPushButton','QLineEdit','QComboBox','QScrollBar','QTreeView','QLabel','QMenuBar','QMenu','QTabWidget','QTabBar','QDialog','QProgressBar','QCheckBox','QSlider','QToolTip']:
+          for sel in ['QMainWindow','QPushButton','QLineEdit','QComboBox','QScrollBar','QTreeView','QLabel','QMenuBar','QMenu','QTabWidget','QTabBar','QDialog','QProgressBar','QCheckBox','QSlider','QToolTip','QPlainTextEdit']:
               assert sel in css
           print('Selectors — OK')
           print(); print('All widget tests passed!')
@@ -371,7 +393,7 @@ jobs:
               'src.core.tab_manager','src.core.terminal','src.core.search','src.core.command_palette',
               'src.ui.editor_widget','src.ui.sidebar','src.ui.terminal_widget','src.ui.toolbar',
               'src.ui.statusbar','src.ui.menubar','src.ui.command_palette',
-              'src.ui.settings_dialog','src.ui.splash','src.ui.theme_stylesheet',
+              'src.ui.settings_dialog','src.ui.splash','src.ui.theme_stylesheet','src.ui.icons',
               'src.ui.file_tree','src.ui.welcome','src.ui.extensions_panel','src.ui.settings_panel',
               'src.utils.theme_loader','src.utils.recent_files','src.utils.shortcuts',
               'src.utils.styles','src.utils.icon_manager',
@@ -403,7 +425,7 @@ jobs:
           grep -q "style.css" docs/index.html && echo "css — OK"
           grep -q "script.js" docs/index.html && echo "js — OK"
           grep -q "PyQt6" docs/index.html && echo "PyQt6 — OK"
-          grep -q "1.0.5" docs/index.html && echo "v1.0.5 — OK" || echo "WARN: version not in docs"
+          grep -q "1.0.6" docs/index.html && echo "v1.0.6 — OK" || echo "WARN: version not in docs"
 
   summary:
     name: "Summary"
@@ -413,7 +435,7 @@ jobs:
     steps:
       - name: Results
         run: |
-          echo "## Test Results — v1.0.5" >> $GITHUB_STEP_SUMMARY
+          echo "## Test Results — v${{ env.APP_VERSION_CHECK }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
@@ -430,4 +452,4 @@ jobs:
 
       - name: Pass
         if: "!contains(needs.*.result, 'failure')"
-        run: echo "All tests passed for v1.0.5!"
+        run: echo "All tests passed for v${{ env.APP_VERSION_CHECK }}!"
