@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OmniIDE v1.0.5 — Fast, Modern, Lightweight Desktop IDE</title>
+    <title>OmniIDE v1.0.6 — Fast, Modern, Lightweight Desktop IDE</title>
     <meta name="description" content="OmniIDE by OmniNodeCo — A fast, modern desktop IDE built with PyQt6. No Electron.">
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <link rel="stylesheet" href="style.css">
@@ -41,7 +41,7 @@
             <p class="hero-sub">by OmniNodeCo</p>
             <p class="hero-tagline">A fast, modern, lightweight desktop IDE.<br>Built with PyQt6. No Electron. No bloat.</p>
             <div class="hero-buttons">
-                <a href="#download" class="btn btn-primary">Download v1.0.5</a>
+                <a href="#download" class="btn btn-primary">Download v1.0.6</a>
                 <a href="https://github.com/OmniNodeCo/OmniIDE" target="_blank" class="btn btn-outline">GitHub</a>
             </div>
             <div class="hero-stats">
@@ -69,12 +69,12 @@
             <div class="feature-card">
                 <div class="feature-icon-svg"><svg viewBox="0 0 24 24" width="32" height="32"><circle cx="12" cy="12" r="9" fill="none" stroke="#f38ba8" stroke-width="1.5"/><circle cx="12" cy="6" r="1.5" fill="#f38ba8"/><circle cx="12" cy="18" r="1.5" fill="#f38ba8"/><line x1="12" y1="7.5" x2="12" y2="16.5" stroke="#f38ba8" stroke-width="1.2"/></svg></div>
                 <h3>Git Integration</h3>
-                <p>Clone, commit, push, pull, diff, log, branches. Auto-detect repos. Git install prompt.</p>
+                <p>Clone, commit, push, pull, diff, log, branches. SVG icon buttons. Git install prompt.</p>
             </div>
             <div class="feature-card">
                 <div class="feature-icon-svg"><svg viewBox="0 0 24 24" width="32" height="32"><rect x="3" y="3" width="7" height="7" rx="1.5" fill="none" stroke="#cba6f7" stroke-width="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5" fill="none" stroke="#cba6f7" stroke-width="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5" fill="none" stroke="#cba6f7" stroke-width="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5" fill="none" stroke="#cba6f7" stroke-width="1.5"/></svg></div>
                 <h3>VS Code Extensions</h3>
-                <p>Browse marketplace. Download VSIX packages. Parse package.json for metadata.</p>
+                <p>Browse marketplace. Download VSIX. Parse package.json. Install and uninstall with one click.</p>
             </div>
             <div class="feature-card">
                 <div class="feature-icon-svg"><svg viewBox="0 0 24 24" width="32" height="32"><rect x="3" y="4" width="18" height="16" rx="3" fill="none" stroke="#f9e2af" stroke-width="1.5"/><line x1="7" y1="9" x2="17" y2="9" stroke="#f9e2af" stroke-width="1.2" stroke-linecap="round"/><line x1="7" y1="12" x2="14" y2="12" stroke="#f9e2af" stroke-width="1.2" stroke-linecap="round"/></svg></div>
@@ -105,8 +105,8 @@
         <div class="screenshots-grid">
             <div class="screenshot-placeholder" onclick="openLightbox(this)"><div class="placeholder-content"><span>Editor</span><small>PyQt6 dark theme</small></div></div>
             <div class="screenshot-placeholder" onclick="openLightbox(this)"><div class="placeholder-content"><span>Terminal</span><small>QProcess shell</small></div></div>
-            <div class="screenshot-placeholder" onclick="openLightbox(this)"><div class="placeholder-content"><span>Git</span><small>Source control</small></div></div>
-            <div class="screenshot-placeholder" onclick="openLightbox(this)"><div class="placeholder-content"><span>Extensions</span><small>Marketplace</small></div></div>
+            <div class="screenshot-placeholder" onclick="openLightbox(this)"><div class="placeholder-content"><span>Git</span><small>SVG icon buttons</small></div></div>
+            <div class="screenshot-placeholder" onclick="openLightbox(this)"><div class="placeholder-content"><span>Extensions</span><small>Marketplace cards</small></div></div>
             <div class="screenshot-placeholder" onclick="openLightbox(this)"><div class="placeholder-content"><span>Palette</span><small>Command search</small></div></div>
             <div class="screenshot-placeholder" onclick="openLightbox(this)"><div class="placeholder-content"><span>Settings</span><small>Visual editor</small></div></div>
         </div>
@@ -120,7 +120,7 @@
     </div>
 
     <section id="download">
-        <h2>Download v1.0.5</h2>
+        <h2>Download v1.0.6</h2>
         <p class="section-sub">No install needed. Download and run.</p>
         <div class="download-cards">
             <div class="download-card" id="dl-windows">
@@ -176,13 +176,26 @@
             <div class="timeline-item">
                 <div class="timeline-dot"></div>
                 <div class="timeline-content">
-                    <h3>v1.0.5</h3><span class="timeline-date">Latest</span>
+                    <h3>v1.0.6</h3><span class="timeline-date">Latest</span>
+                    <ul>
+                        <li>SVG icons for sidebar tabs, git, and extension buttons</li>
+                        <li>Organized Git panel with icon buttons per action</li>
+                        <li>Fixed marketplace extension search and VSIX install</li>
+                        <li>Styled extension cards with background colors</li>
+                        <li>PyQt6.QtSvg icon rendering system</li>
+                        <li>Better error handling for extension downloads</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="timeline-item">
+                <div class="timeline-dot"></div>
+                <div class="timeline-content">
+                    <h3>v1.0.5</h3>
                     <ul>
                         <li>Fixed Ubuntu 24.04 CI (libgl1 replaces libgl1-mesa-glx)</li>
+                        <li>QT_QPA_PLATFORM=offscreen for headless tests</li>
                         <li>All spec hidden_imports verified</li>
-                        <li>Comprehensive PyQt6 GUI tests under Xvfb</li>
                         <li>Stylesheet selector validation</li>
-                        <li>Updated docs website</li>
                     </ul>
                 </div>
             </div>
@@ -237,7 +250,7 @@
         <div class="faq-list">
             <div class="faq-item"><button class="faq-question" onclick="toggleFaq(this)">Is it free?<span class="faq-arrow">&#9656;</span></button><div class="faq-answer"><p>Yes, MIT License. Completely free and open source.</p></div></div>
             <div class="faq-item"><button class="faq-question" onclick="toggleFaq(this)">Electron?<span class="faq-arrow">&#9656;</span></button><div class="faq-answer"><p>No. Python + PyQt6. Native Qt widgets. No Chromium.</p></div></div>
-            <div class="faq-item"><button class="faq-question" onclick="toggleFaq(this)">What changed in 1.0.5?<span class="faq-arrow">&#9656;</span></button><div class="faq-answer"><p>Fixed CI for Ubuntu 24.04, verified all spec imports, added PyQt6 GUI tests, updated docs.</p></div></div>
+            <div class="faq-item"><button class="faq-question" onclick="toggleFaq(this)">What changed in 1.0.6?<span class="faq-arrow">&#9656;</span></button><div class="faq-answer"><p>SVG icons for all sidebar panels and git buttons, fixed marketplace extension search and VSIX install, styled extension cards with backgrounds, PyQt6.QtSvg rendering.</p></div></div>
             <div class="faq-item"><button class="faq-question" onclick="toggleFaq(this)">Languages?<span class="faq-arrow">&#9656;</span></button><div class="faq-answer"><p>Python, JS, TS, HTML, CSS, JSON and more via QSyntaxHighlighter.</p></div></div>
             <div class="faq-item"><button class="faq-question" onclick="toggleFaq(this)">VS Code extensions?<span class="faq-arrow">&#9656;</span></button><div class="faq-answer"><p>Yes. Downloads VSIX, extracts, parses package.json. Themes and language packs work best.</p></div></div>
             <div class="faq-item"><button class="faq-question" onclick="toggleFaq(this)">Auto-update?<span class="faq-arrow">&#9656;</span></button><div class="faq-answer"><p>Checks GitHub Releases on startup. Shows dialog with download link. No in-place updates.</p></div></div>
