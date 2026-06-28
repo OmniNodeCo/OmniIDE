@@ -20,7 +20,7 @@
 <!-- View Counter (excludes repo owner) -->
 <br>
 
-![Views](https://komarev.com/ghpvc/?username=OmniNodeCo-OmniIDE&label=Views&color=89b4fa&style=for-the-badge&abbreviated=true)
+![Views](https://raw.githubusercontent.com/OmniNodeCo/views-badge/main/badges/OmniNodeCo/OmniIDE.svg)
 
 <br>
 
