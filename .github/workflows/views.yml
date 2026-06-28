@@ -1,20 +1,45 @@
-name: Views
+# Views Badge Counter
+# Uses OmniNodeCo/views-badge action
+# @see https://github.com/OmniNodeCo/views-badge
+name: Count Views
 
 on:
+  # Runs whenever anyone opens a PR or issue (real traffic signal)
+  pull_request:
+    types: [opened]
+  issues:
+    types: [opened]
+  # Runs on every push to main
+  push:
+    branches: [main, master]
+  # Daily cleanup run
+  schedule:
+    - cron: '0 0 * * *'
+  # Manual trigger
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  check:
-    name: "Verify Badge"
+  count:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - run: |
-          if grep -q "komarev.com/ghpvc" README.md; then
-            echo "View counter badge — OK"
-          else
-            echo "WARNING: No komarev badge in README"
-          fi
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Count View
+        uses: OmniNodeCo/views-badge@main
+        with:
+          token:       ${{ secrets.GITHUB_TOKEN }}
+          visitor:     ${{ github.actor }}
+          output_file: .views/badge.json
+          config_file: .viewsbadge
+
+      - name: Commit badge data
+        run: |
+          git config user.name  "views-badge[bot]"
+          git config user.email "views-badge[bot]@users.noreply.github.com"
+          git add .views/
+          git diff --staged --quiet || git commit -m "chore: update view count [skip ci]"
+          git push
