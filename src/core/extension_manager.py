@@ -1,4 +1,4 @@
-"""Extension manager — fixed marketplace search and VSIX install."""
+"""Extension manager — thread-safe marketplace search and VSIX install."""
 
 import json
 import os
@@ -35,6 +35,7 @@ class ExtensionManager:
             pass
 
     def search(self, query, callback, page_size=12):
+        """Search marketplace. callback(results, error) is called from background thread."""
         def _do():
             try:
                 results = self._query(query, page_size)
@@ -125,6 +126,7 @@ class ExtensionManager:
             return None
 
     def install_extension(self, ext_info, callback):
+        """Install extension. callback(success, message) called from background thread."""
         def _do():
             try:
                 vsix_url = ext_info.get("vsix_url", "")

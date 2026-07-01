@@ -7,7 +7,7 @@ from PyQt6.QtWidgets import (
     QFrame, QTreeView, QScrollArea,
     QStackedWidget, QLineEdit, QMessageBox,
 )
-from PyQt6.QtCore import Qt, QDir, QModelIndex
+from PyQt6.QtCore import Qt, QDir, QModelIndex, pyqtSignal, QObject
 from PyQt6.QtGui import QFont, QFileSystemModel
 
 from src.ui.icons import svg_icon
@@ -54,7 +54,6 @@ class FileTree(QWidget):
 
 
 def _sep():
-    """Create a horizontal separator."""
     sep = QFrame()
     sep.setProperty("cssClass", "separator")
     sep.setFixedHeight(1)
@@ -62,14 +61,12 @@ def _sep():
 
 
 def _header(text):
-    """Create a section header label."""
     label = QLabel(text.upper())
     label.setProperty("cssClass", "header")
     return label
 
 
 def _section_label(text):
-    """Create a dim section sub-label."""
     label = QLabel(f"  {text}")
     label.setProperty("cssClass", "dim")
     label.setFont(QFont("Segoe UI", 8))
@@ -77,7 +74,6 @@ def _section_label(text):
 
 
 def _icon_btn(text, icon_name, css_class=None, size=14):
-    """Create a button with an SVG icon."""
     btn = QPushButton(f"  {text}")
     btn.setIcon(svg_icon(icon_name, size))
     if css_class:
@@ -136,7 +132,6 @@ class GitPanel(QWidget):
         layout.addWidget(_header("Source Control"))
         layout.addWidget(_sep())
 
-        # Repository
         layout.addWidget(_section_label("Repository"))
 
         clone_btn = _icon_btn("Clone", "clone")
@@ -152,8 +147,6 @@ class GitPanel(QWidget):
         layout.addWidget(remote_btn)
 
         layout.addWidget(_sep())
-
-        # Changes
         layout.addWidget(_section_label("Changes"))
 
         status_btn = _icon_btn("Status", "status")
@@ -169,8 +162,6 @@ class GitPanel(QWidget):
         layout.addWidget(stage_btn)
 
         layout.addWidget(_sep())
-
-        # Commit & Sync
         layout.addWidget(_section_label("Commit & Sync"))
 
         commit_btn = _icon_btn("Commit", "commit", "success")
@@ -190,8 +181,6 @@ class GitPanel(QWidget):
         layout.addLayout(sync_row)
 
         layout.addWidget(_sep())
-
-        # History
         layout.addWidget(_section_label("History"))
 
         log_btn = _icon_btn("Log", "log")
@@ -205,13 +194,24 @@ class GitPanel(QWidget):
         layout.addStretch()
 
 
+class ExtensionSignals(QObject):
+    """Signals for thread-safe extension callbacks."""
+    search_done = pyqtSignal(list, str)
+    install_done = pyqtSignal(bool, str)
+
+
 class ExtensionsPanel(QWidget):
-    """Extensions marketplace panel with icons."""
+    """Extensions marketplace panel with icons and thread-safe callbacks."""
 
     def __init__(self, app):
         super().__init__()
         self.app = app
         self.ext_manager = app.extension_manager
+
+        # Thread-safe signals
+        self.signals = ExtensionSignals()
+        self.signals.search_done.connect(self._handle_search_results)
+        self.signals.install_done.connect(self._handle_install_done)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(8, 8, 8, 8)
@@ -262,11 +262,13 @@ class ExtensionsPanel(QWidget):
         self.results_widget = QWidget()
         self.results_layout = QVBoxLayout(self.results_widget)
         self.results_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-        self.results_layout.setSpacing(2)
+        self.results_layout.setSpacing(4)
         self.scroll.setWidget(self.results_widget)
         layout.addWidget(self.scroll, 1)
 
         self.tab = "marketplace"
+        self._pending_install_name = ""
+        self._last_query = ""
 
     def _switch(self, tab):
         self.tab = tab
@@ -282,23 +284,39 @@ class ExtensionsPanel(QWidget):
         query = self.search_input.text().strip()
         if not query:
             return
+        self._last_query = query
         self.tab = "marketplace"
         self.mp_btn.setChecked(True)
         self.inst_btn.setChecked(False)
         self._clear()
         self.status_label.setText("Searching...")
         self.app.set_status(f"Searching: {query}")
-        self.ext_manager.search(query, self._on_results)
 
-    def _on_results(self, results, error):
+        # Use signal-based callback for thread safety
+        def _callback(results, error):
+            # This runs in background thread — emit signal to main thread
+            error_str = error if error else ""
+            self.signals.search_done.emit(results, error_str)
+
+        self.ext_manager.search(query, _callback)
+
+    def _handle_search_results(self, results, error):
+        """Called on main thread via signal."""
         self._clear()
+
         if error:
             self.status_label.setText(f"Error: {error}")
+            self.app.set_status(f"Search error: {error}")
             return
+
         if not results:
             self.status_label.setText("No extensions found")
+            self.app.set_status("No extensions found")
             return
+
         self.status_label.setText(f"{len(results)} found")
+        self.app.set_status(f"Found {len(results)} extensions")
+
         for ext in results:
             self._add_card(ext, "marketplace")
 
@@ -314,47 +332,73 @@ class ExtensionsPanel(QWidget):
 
     def _add_card(self, info, mode):
         card = QFrame()
-        card.setStyleSheet(f"QFrame {{ background-color: {self.app.colors['bg_secondary']}; border-radius: 6px; padding: 4px; }}")
+        card.setStyleSheet(
+            f"QFrame {{ background-color: {self.app.colors['bg_secondary']}; "
+            f"border-radius: 6px; padding: 2px; margin: 2px; }}"
+        )
+
         cl = QVBoxLayout(card)
         cl.setContentsMargins(10, 8, 10, 8)
         cl.setSpacing(3)
 
-        # Name row
+        # Name + version row
         nr = QHBoxLayout()
-        name = QLabel(info.get("name", info.get("id", "?")))
-        name.setFont(QFont("Segoe UI", 10))
-        name.setStyleSheet("font-weight: bold;")
-        nr.addWidget(name)
-        ver = QLabel(f"v{info.get('version', '')}")
-        ver.setProperty("cssClass", "dim")
-        nr.addWidget(ver)
+        nr.setSpacing(8)
+
+        name_text = info.get("name", info.get("id", "Unknown"))
+        name_label = QLabel(name_text)
+        name_label.setFont(QFont("Segoe UI", 10))
+        name_label.setStyleSheet("font-weight: bold; background: transparent;")
+        nr.addWidget(name_label)
+
+        ver_text = info.get("version", "")
+        if ver_text:
+            ver_label = QLabel(f"v{ver_text}")
+            ver_label.setProperty("cssClass", "dim")
+            ver_label.setStyleSheet("background: transparent;")
+            nr.addWidget(ver_label)
+
         nr.addStretch()
         cl.addLayout(nr)
 
+        # Publisher
         pub = info.get("publisher", "")
         if pub:
-            pl = QLabel(pub)
-            pl.setProperty("cssClass", "accent")
-            pl.setFont(QFont("Segoe UI", 8))
-            cl.addWidget(pl)
+            pub_label = QLabel(pub)
+            pub_label.setProperty("cssClass", "accent")
+            pub_label.setFont(QFont("Segoe UI", 8))
+            pub_label.setStyleSheet("background: transparent;")
+            cl.addWidget(pub_label)
 
+        # Description
         desc = info.get("description", "")
         if desc:
-            dl = QLabel(desc[:100] + ("..." if len(desc) > 100 else ""))
-            dl.setWordWrap(True)
-            dl.setProperty("cssClass", "dim")
-            cl.addWidget(dl)
+            desc_text = desc[:100] + ("..." if len(desc) > 100 else "")
+            desc_label = QLabel(desc_text)
+            desc_label.setWordWrap(True)
+            desc_label.setProperty("cssClass", "dim")
+            desc_label.setStyleSheet("background: transparent;")
+            cl.addWidget(desc_label)
 
+        # Stats (marketplace only)
         if mode == "marketplace":
             installs = info.get("installs", 0)
-            st = QLabel(f"Downloads: {ExtensionManager.format_installs(installs)}")
-            st.setProperty("cssClass", "dim")
-            st.setFont(QFont("Segoe UI", 8))
-            cl.addWidget(st)
+            stats_label = QLabel(
+                f"Downloads: {ExtensionManager.format_installs(installs)}"
+            )
+            stats_label.setProperty("cssClass", "dim")
+            stats_label.setFont(QFont("Segoe UI", 8))
+            stats_label.setStyleSheet("background: transparent;")
+            cl.addWidget(stats_label)
 
+        # Action button
+        if mode == "marketplace":
             if info.get("installed", False):
                 il = QLabel("  Installed")
-                il.setStyleSheet(f"color: {self.app.colors.get('success','#a6e3a1')}; font-weight: bold;")
+                il.setStyleSheet(
+                    f"color: {self.app.colors.get('success', '#a6e3a1')}; "
+                    f"font-weight: bold; background: transparent;"
+                )
                 cl.addWidget(il)
             else:
                 ib = _icon_btn("Install", "install", "success")
@@ -368,25 +412,36 @@ class ExtensionsPanel(QWidget):
         self.results_layout.addWidget(card)
 
     def _install(self, info):
-        name = info.get("name", "ext")
+        name = info.get("name", "extension")
+        self._pending_install_name = name
         self.status_label.setText(f"Installing {name}...")
         self.app.set_status(f"Installing {name}...")
 
-        def done(ok, msg):
-            self.status_label.setText(msg)
-            self.app.set_status(msg)
-            if ok:
-                QMessageBox.information(self, "Installed", msg)
-                self._on_search()
-            else:
-                QMessageBox.warning(self, "Failed", msg)
+        def _callback(success, message):
+            # Background thread — emit signal
+            self.signals.install_done.emit(success, message)
 
-        self.ext_manager.install_extension(info, done)
+        self.ext_manager.install_extension(info, _callback)
+
+    def _handle_install_done(self, success, message):
+        """Called on main thread via signal."""
+        self.status_label.setText(message)
+        self.app.set_status(message)
+
+        if success:
+            QMessageBox.information(self, "Installed", message)
+            # Refresh search results
+            if self._last_query:
+                self._on_search()
+        else:
+            QMessageBox.warning(self, "Install Failed", message)
 
     def _uninstall(self, info):
         eid = info.get("id", "")
         name = info.get("name", eid)
-        if QMessageBox.question(self, "Uninstall", f"Uninstall {name}?") != QMessageBox.StandardButton.Yes:
+        if QMessageBox.question(
+            self, "Uninstall", f"Uninstall {name}?"
+        ) != QMessageBox.StandardButton.Yes:
             return
         ok, msg = self.ext_manager.uninstall_extension(eid)
         if ok:

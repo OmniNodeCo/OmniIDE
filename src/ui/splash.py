@@ -1,4 +1,4 @@
-"""Splash screen — PyQt6 v1.0.6."""
+"""Splash screen — PyQt6 v1.0.7."""
 
 from PyQt6.QtWidgets import QWidget, QLabel, QVBoxLayout, QProgressBar
 from PyQt6.QtCore import Qt
@@ -57,7 +57,7 @@ class SplashScreen(QWidget):
         self.progress.setStyleSheet("QProgressBar { background-color: #313244; border: none; border-radius: 2px; } QProgressBar::chunk { background-color: #89b4fa; border-radius: 2px; }")
         layout.addWidget(self.progress)
 
-        ver = QLabel("v1.0.6")
+        ver = QLabel("v1.0.7")
         ver.setAlignment(Qt.AlignmentFlag.AlignRight)
         ver.setFont(QFont("Consolas", 8))
         ver.setStyleSheet("color: #6c7086; border: none;")

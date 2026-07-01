@@ -4,7 +4,7 @@ import os
 import sys
 
 APP_NAME = "OmniIDE"
-APP_VERSION = "1.0.6"
+APP_VERSION = "1.0.7"
 APP_AUTHOR = "OmniNodeCo"
 APP_REPO = "OmniNodeCo/OmniIDE"
 APP_GITHUB_API = f"https://api.github.com/repos/{APP_REPO}/releases/latest"

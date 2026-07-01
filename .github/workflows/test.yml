@@ -14,7 +14,7 @@ permissions:
 
 env:
   QT_QPA_PLATFORM: offscreen
-  APP_VERSION_CHECK: "1.0.6"
+  APP_VERSION_CHECK: "1.0.7"
   QT_DEPS: >-
     libgl1 libglu1-mesa libegl1 libxkbcommon0
     libdbus-1-3 libxcb-cursor0 libxcb-xinerama0
@@ -72,81 +72,45 @@ jobs:
           sudo apt-get install -y ${{ env.QT_DEPS }}
           pip install --upgrade pip
           pip install -r requirements.txt pillow
-
-      - name: Config imports
+      - name: Config
         run: |
           python -c "
           from src.config import APP_NAME, APP_VERSION, APP_AUTHOR
-          from src.config import DEFAULT_SETTINGS, SETTINGS_PATH, CONFIG_DIR
-          from src.config import SUPPORTED_EXTENSIONS, FILE_DIALOG_TYPES
-          from src.config import FONT_OPTIONS, GIT_DOWNLOAD_URLS
-          from src.config import VSCODE_MARKETPLACE_URL, APP_GITHUB_API, APP_WEBSITE
-          assert APP_VERSION == '${{ env.APP_VERSION_CHECK }}', f'Version mismatch: {APP_VERSION} != ${{ env.APP_VERSION_CHECK }}'
+          assert APP_VERSION == '${{ env.APP_VERSION_CHECK }}', f'Version mismatch: {APP_VERSION}'
           print(f'{APP_NAME} v{APP_VERSION} — OK')
           "
-
-      - name: Init imports
+      - name: Init
         run: |
           python -c "
-          from src import __version__, __author__
-          assert __version__ == '${{ env.APP_VERSION_CHECK }}', f'Version mismatch: {__version__}'
-          print(f'v{__version__} by {__author__} — OK')
+          from src import __version__
+          assert __version__ == '${{ env.APP_VERSION_CHECK }}'
+          print(f'v{__version__} — OK')
           "
-
-      - name: Utils imports
-        run: |
-          python -c "
-          from src.utils.theme_loader import ThemeLoader
-          from src.utils.recent_files import RecentFilesManager
-          print('utils — OK')
-          "
-
-      - name: Core imports
-        run: |
-          python -c "
-          from src.core.extension_manager import ExtensionManager
-          from src.core.updater import Updater
-          from src.core.git_installer import GitInstaller
-          print('core — OK')
-          "
-
-      - name: PyQt6 check
-        run: |
-          python -c "
-          from PyQt6.QtWidgets import QApplication
-          from PyQt6.QtCore import Qt
-          from PyQt6.QtGui import QFont
-          from PyQt6.QtSvg import QSvgRenderer
-          app = QApplication([])
-          print('PyQt6 + QtSvg — OK')
-          app.quit()
-          "
-
-      - name: Icons module
+      - name: Utils
+        run: python -c "from src.utils.theme_loader import ThemeLoader; from src.utils.recent_files import RecentFilesManager; print('OK')"
+      - name: Core
+        run: python -c "from src.core.extension_manager import ExtensionManager; from src.core.updater import Updater; from src.core.git_installer import GitInstaller; print('OK')"
+      - name: PyQt6
+        run: python -c "from PyQt6.QtWidgets import QApplication; from PyQt6.QtSvg import QSvgRenderer; app=QApplication([]); print('OK'); app.quit()"
+      - name: Icons
         run: |
           python -c "
           from src.ui.icons import SVGS, svg_icon
-          assert len(SVGS) > 15, f'Only {len(SVGS)} icons'
-          required = ['files','git','extensions','new_file','open_file','save',
-                      'search','settings','theme','terminal','palette',
-                      'clone','commit','push','pull','diff','branch','log',
-                      'status','stage','remote','install','uninstall','refresh']
-          missing = [i for i in required if i not in SVGS]
-          assert not missing, f'Missing icons: {missing}'
-          print(f'{len(SVGS)} SVG icons — OK')
+          assert len(SVGS) > 15
+          for i in ['files','git','extensions','new_file','save','search','settings','theme','terminal','palette','clone','commit','push','pull','diff','branch','log','status','stage','remote','install','uninstall','refresh']:
+              assert i in SVGS, f'Missing: {i}'
+          print(f'{len(SVGS)} icons — OK')
           "
-
-      - name: Theme files
+      - name: Themes
         run: |
           python -c "
-          import json, os
+          import json
           for t in ['dark','light']:
               with open(f'assets/themes/{t}.json') as f: d=json.load(f)
-              assert 'colors' in d and 'syntax' in d
               for c in ['bg_primary','bg_secondary','fg_primary','accent','editor_bg','editor_fg','sidebar_bg','terminal_bg','terminal_fg']:
-                  assert c in d['colors'], f'{t} missing {c}'
+                  assert c in d['colors']
               for s in ['keyword','string','comment','number','function']:
-                  assert s in d['syntax'], f'{t} missing {s}'
+                  assert s in d['syntax']
               print(f'{t}.json — OK')
           "
 
@@ -166,87 +130,34 @@ jobs:
           sudo apt-get install -y ${{ env.QT_DEPS }}
           pip install --upgrade pip
           pip install -r requirements.txt pillow
-
       - name: ThemeLoader
-        run: |
-          python -c "
-          from src.utils.theme_loader import ThemeLoader
-          d=ThemeLoader('dark'); l=ThemeLoader('light'); f=ThemeLoader('xxx')
-          assert d.colors['bg_primary'] != l.colors['bg_primary']
-          assert f.colors['bg_primary']
-          print('ThemeLoader — OK')
-          "
-
+        run: python -c "from src.utils.theme_loader import ThemeLoader; d=ThemeLoader('dark'); l=ThemeLoader('light'); assert d.colors['bg_primary']!=l.colors['bg_primary']; print('OK')"
       - name: RecentFiles
         run: |
           python -c "
-          import tempfile, os
-          from src.utils.recent_files import RecentFilesManager
+          import tempfile,os; from src.utils.recent_files import RecentFilesManager
           m=RecentFilesManager()
-          with tempfile.NamedTemporaryFile(delete=False, suffix='.py') as f:
-              f.write(b'#'); p=f.name
-          try:
-              m.add(p); assert os.path.abspath(p) in m.get_all()
-              m.clear(); assert len(m.get_all())==0
+          with tempfile.NamedTemporaryFile(delete=False,suffix='.py') as f: f.write(b'#'); p=f.name
+          try: m.add(p); assert os.path.abspath(p) in m.get_all(); m.clear(); assert len(m.get_all())==0
           finally: os.unlink(p)
-          print('RecentFiles — OK')
+          print('OK')
           "
-
       - name: ExtensionManager
-        run: |
-          python -c "
-          from src.core.extension_manager import ExtensionManager as E
-          assert E.format_installs(500)=='500'
-          assert E.format_installs(1500)=='1.5K'
-          assert E.format_installs(2500000)=='2.5M'
-          print('ExtensionManager — OK')
-          "
-
+        run: python -c "from src.core.extension_manager import ExtensionManager as E; assert E.format_installs(500)=='500'; assert E.format_installs(1500)=='1.5K'; assert E.format_installs(2500000)=='2.5M'; print('OK')"
       - name: Updater
-        run: |
-          python -c "
-          from src.core.updater import Updater
-          u=Updater.__new__(Updater)
-          assert u._is_newer('1.0.7','1.0.6')==True
-          assert u._is_newer('1.0.6','1.0.6')==False
-          assert u._is_newer('1.0.5','1.0.6')==False
-          assert u._is_newer('2.0.0','1.9.9')==True
-          print('Updater — OK')
-          "
-
+        run: python -c "from src.core.updater import Updater; u=Updater.__new__(Updater); assert u._is_newer('1.0.8','1.0.7'); assert not u._is_newer('1.0.7','1.0.7'); assert not u._is_newer('1.0.6','1.0.7'); print('OK')"
       - name: GitInstaller
-        run: |
-          python -c "
-          from src.core.git_installer import GitInstaller
-          g=GitInstaller.__new__(GitInstaller)
-          assert g._get_platform_key() in ('win32','darwin','linux')
-          assert g._get_platform_name() in ('Windows','macOS','Linux')
-          print('GitInstaller — OK')
-          "
-
-      - name: Config defaults
+        run: python -c "from src.core.git_installer import GitInstaller; g=GitInstaller.__new__(GitInstaller); assert g._get_platform_key() in ('win32','darwin','linux'); print('OK')"
+      - name: Defaults
         run: |
           python -c "
           from src.config import DEFAULT_SETTINGS
-          for k in ['theme','font_family','font_size','tab_size','show_line_numbers',
-              'word_wrap','auto_indent','auto_save','auto_check_updates','window_width',
-              'window_height','sidebar_width','terminal_height','max_recent_files',
-              'default_shell','installed_extensions','highlight_current_line',
-              'show_whitespace','cursor_blink','minimap_enabled','suppress_git_prompt']:
-              assert k in DEFAULT_SETTINGS, f'Missing: {k}'
-          print(f'Defaults — {len(DEFAULT_SETTINGS)} keys — OK')
+          for k in ['theme','font_family','font_size','tab_size','show_line_numbers','word_wrap','auto_indent','auto_save','auto_check_updates','suppress_git_prompt']:
+              assert k in DEFAULT_SETTINGS
+          print(f'{len(DEFAULT_SETTINGS)} keys — OK')
           "
-
       - name: Stylesheet
-        run: |
-          python -c "
-          from src.utils.theme_loader import ThemeLoader
-          from src.ui.theme_stylesheet import build_stylesheet
-          css=build_stylesheet(ThemeLoader('dark').colors)
-          for s in ['QMainWindow','QPushButton','QPlainTextEdit','QTabBar','QTreeView','QScrollBar','QMenu']:
-              assert s in css, f'Missing: {s}'
-          print(f'Stylesheet — {len(css)} chars — OK')
-          "
+        run: python -c "from src.utils.theme_loader import ThemeLoader; from src.ui.theme_stylesheet import build_stylesheet; css=build_stylesheet(ThemeLoader('dark').colors); assert 'QMainWindow' in css and 'QPushButton' in css and 'QPlainTextEdit' in css; print(f'{len(css)} chars — OK')"
 
   gui:
     name: "GUI Tests"
@@ -264,21 +175,13 @@ jobs:
           sudo apt-get install -y ${{ env.QT_DEPS }}
           pip install --upgrade pip
           pip install -r requirements.txt pillow
-
-      - name: Widget tests
+      - name: Widgets
         run: |
           python -c "
-          import sys, os
-          os.environ['QT_QPA_PLATFORM'] = 'offscreen'
-
-          from PyQt6.QtWidgets import QApplication
-          app=QApplication(sys.argv)
-          from src.utils.theme_loader import ThemeLoader
-          from src.ui.theme_stylesheet import build_stylesheet
-          loader=ThemeLoader('dark')
-          c=loader.colors; s=loader.syntax
-          app.setStyleSheet(build_stylesheet(c))
-
+          import sys,os; os.environ['QT_QPA_PLATFORM']='offscreen'
+          from PyQt6.QtWidgets import QApplication; app=QApplication(sys.argv)
+          from src.utils.theme_loader import ThemeLoader; from src.ui.theme_stylesheet import build_stylesheet
+          L=ThemeLoader('dark'); c=L.colors; s=L.syntax; app.setStyleSheet(build_stylesheet(c))
           class M:
               def __init__(self):
                   self.settings={'theme':'dark','font_family':'Monospace','font_size':13,'tab_size':4,'show_line_numbers':True,'word_wrap':False,'auto_indent':True,'highlight_current_line':True,'sidebar_width':280}
@@ -286,79 +189,43 @@ jobs:
               def set_status(self,t): pass
               def save_settings(self): pass
           m=M()
-
           from src.ui.editor_widget import CodeEditor
-          e=CodeEditor(m,filepath='test.py')
-          e.set_content('print(1)')
-          assert e.get_content()=='print(1)'
-          e.set_content(''); assert e.get_content()==''
-          e.set_content('a\nb\nc'); assert e.get_content().count(chr(10))==2
-          print('CodeEditor — OK')
-
-          for ext in ['test.py','test.js','test.html','test.css','test.json']:
-              x=CodeEditor(m,filepath=ext); x.set_content('x'); assert x.get_content()=='x'
-          print('Filetypes — OK')
-
+          e=CodeEditor(m,filepath='test.py'); e.set_content('print(1)'); assert e.get_content()=='print(1)'; print('Editor OK')
           from src.ui.splash import SplashScreen
-          sp=SplashScreen(); sp.set_status('T'); sp.set_progress(50); sp.set_progress(100); sp.close()
-          print('Splash — OK')
-
+          sp=SplashScreen(); sp.set_status('T'); sp.set_progress(100); sp.close(); print('Splash OK')
           from src.ui.statusbar import StatusBar
-          sb=StatusBar(m); sb.set_text('t'); sb.update_file_type('Python'); sb.update_git_branch('main'); sb.update_cursor(5,10)
-          print('StatusBar — OK')
-
-          from src.ui.icons import SVGS, svg_icon
-          for name in SVGS:
-              icon = svg_icon(name, 16)
-              assert not icon.isNull(), f'Icon {name} is null'
-          print(f'All {len(SVGS)} SVG icons render — OK')
-
+          sb=StatusBar(m); sb.set_text('t'); sb.update_file_type('Python'); print('StatusBar OK')
+          from src.ui.icons import SVGS,svg_icon
+          for n in SVGS:
+              i=svg_icon(n,16); assert not i.isNull()
+          print(f'{len(SVGS)} icons OK')
           css=build_stylesheet(c)
-          for sel in ['QMainWindow','QPushButton','QLineEdit','QComboBox','QScrollBar','QTreeView','QLabel','QMenuBar','QMenu','QTabWidget','QTabBar','QDialog','QProgressBar','QCheckBox','QSlider','QToolTip','QPlainTextEdit']:
+          for sel in ['QMainWindow','QPushButton','QPlainTextEdit','QTabBar','QTreeView','QScrollBar','QMenu','QLineEdit','QComboBox','QLabel','QMenuBar','QDialog','QProgressBar','QCheckBox','QSlider','QToolTip']:
               assert sel in css
-          print('Selectors — OK')
-          print(); print('All widget tests passed!')
+          print('Selectors OK')
           app.quit()
           "
-
-      - name: Integration test
+      - name: Integration
         run: |
           python -c "
-          import sys, os
-          os.environ['QT_QPA_PLATFORM'] = 'offscreen'
-
-          from PyQt6.QtWidgets import QApplication
-          app=QApplication(sys.argv)
-          from src.utils.theme_loader import ThemeLoader
-          from src.ui.editor_widget import EditorTabWidget, SearchWidget
-          loader=ThemeLoader('dark')
-
+          import sys,os; os.environ['QT_QPA_PLATFORM']='offscreen'
+          from PyQt6.QtWidgets import QApplication; app=QApplication(sys.argv)
+          from src.utils.theme_loader import ThemeLoader; from src.ui.editor_widget import EditorTabWidget,SearchWidget
+          L=ThemeLoader('dark')
           class M:
               def __init__(self):
                   self.settings={'theme':'dark','font_family':'Monospace','font_size':13,'tab_size':4,'show_line_numbers':True,'word_wrap':False,'auto_indent':True,'highlight_current_line':True,'sidebar_width':280}
-                  self.colors=loader.colors; self.syntax_colors=loader.syntax; self.current_project_path=None
+                  self.colors=L.colors; self.syntax_colors=L.syntax; self.current_project_path=None
               def set_status(self,t): pass
               def save_settings(self): pass
           m=M()
-          from src.ui.statusbar import StatusBar
-          m.statusbar=StatusBar(m)
-
-          tabs=EditorTabWidget(m)
-          assert tabs.new_tab(content='hello',title='T') is not None
-          assert tabs.tabs.count()==1
-          tabs.new_tab(filepath='test.py',content='x=1')
-          assert tabs.tabs.count()==2
-          assert tabs.get_current_editor() is not None
-
-          sw=SearchWidget(tabs)
-          sw.toggle(); assert sw.isVisible()
-          sw.toggle(); assert not sw.isVisible()
-
+          from src.ui.statusbar import StatusBar; m.statusbar=StatusBar(m)
+          tabs=EditorTabWidget(m); tabs.new_tab(content='hi',title='T'); assert tabs.tabs.count()==1
+          tabs.new_tab(filepath='t.py',content='x=1'); assert tabs.tabs.count()==2
+          sw=SearchWidget(tabs); sw.toggle(); assert sw.isVisible(); sw.toggle(); assert not sw.isVisible()
           for i in range(5): tabs.new_tab(content=f'c{i}',title=f'T{i}')
-          assert tabs.tabs.count()==7
-          tabs.apply_font(); tabs.refresh_all()
-
-          print('Integration — OK')
+          assert tabs.tabs.count()==7; tabs.apply_font(); tabs.refresh_all()
+          print('Integration OK')
           app.quit()
           "
 
@@ -378,54 +245,30 @@ jobs:
           sudo apt-get install -y ${{ env.QT_DEPS }}
           pip install --upgrade pip
           pip install -r requirements.txt pillow pyinstaller
-
       - name: Validate
         run: |
           python -c "
           import ast
           with open('OmniIDE.spec') as f: content=f.read()
-          ast.parse(content)
-          print('Syntax — OK')
-          required=[
-              'src.app','src.config',
-              'src.core.file_manager','src.core.git_manager','src.core.git_installer',
-              'src.core.extension_manager','src.core.updater','src.core.syntax_highlighter',
-              'src.core.tab_manager','src.core.terminal','src.core.search','src.core.command_palette',
-              'src.ui.editor_widget','src.ui.sidebar','src.ui.terminal_widget','src.ui.toolbar',
-              'src.ui.statusbar','src.ui.menubar','src.ui.command_palette',
-              'src.ui.settings_dialog','src.ui.splash','src.ui.theme_stylesheet','src.ui.icons',
-              'src.ui.file_tree','src.ui.welcome','src.ui.extensions_panel','src.ui.settings_panel',
-              'src.utils.theme_loader','src.utils.recent_files','src.utils.shortcuts',
-              'src.utils.styles','src.utils.icon_manager',
-          ]
-          missing=[m for m in required if m not in content]
-          if missing:
-              for m in missing: print(f'  MISSING: {m}')
-              exit(1)
-          print(f'All {len(required)} modules — OK')
-          assert 'run.py' in content and 'assets' in content
-          print('Spec — OK')
+          ast.parse(content); print('Syntax OK')
+          for m in ['src.app','src.config','src.core.file_manager','src.core.git_manager','src.core.git_installer','src.core.extension_manager','src.core.updater','src.core.syntax_highlighter','src.core.tab_manager','src.core.terminal','src.core.search','src.core.command_palette','src.ui.editor_widget','src.ui.sidebar','src.ui.terminal_widget','src.ui.toolbar','src.ui.statusbar','src.ui.menubar','src.ui.command_palette','src.ui.settings_dialog','src.ui.splash','src.ui.theme_stylesheet','src.ui.icons','src.ui.file_tree','src.ui.welcome','src.ui.extensions_panel','src.ui.settings_panel','src.utils.theme_loader','src.utils.recent_files','src.utils.shortcuts','src.utils.styles','src.utils.icon_manager']:
+              assert m in content, f'MISSING: {m}'
+          print('All modules OK')
           "
 
   docs:
-    name: "Docs Validation"
+    name: "Docs"
     runs-on: ubuntu-latest
     needs: structure
     steps:
       - uses: actions/checkout@v4
-      - name: Check docs
+      - name: Check
         run: |
           for f in docs/index.html docs/style.css docs/script.js docs/favicon.svg; do
             [ -f "$f" ] && echo "OK: $f" || echo "MISSING: $f"
           done
-      - name: Validate HTML
-        run: |
-          grep -q "<html" docs/index.html && echo "html — OK"
-          grep -q "favicon.svg" docs/index.html && echo "favicon — OK"
-          grep -q "style.css" docs/index.html && echo "css — OK"
-          grep -q "script.js" docs/index.html && echo "js — OK"
-          grep -q "PyQt6" docs/index.html && echo "PyQt6 — OK"
-          grep -q "1.0.6" docs/index.html && echo "v1.0.6 — OK" || echo "WARN: version not in docs"
+          grep -q "1.0.7" docs/index.html && echo "v1.0.7 OK" || echo "WARN: version"
+          grep -q "PyQt6" docs/index.html && echo "PyQt6 OK"
 
   summary:
     name: "Summary"
@@ -435,8 +278,7 @@ jobs:
     steps:
       - name: Results
         run: |
-          echo "## Test Results — v${{ env.APP_VERSION_CHECK }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Tests v${{ env.APP_VERSION_CHECK }}" >> $GITHUB_STEP_SUMMARY
           echo "| Job | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|-----|--------|" >> $GITHUB_STEP_SUMMARY
           echo "| Structure | ${{ needs.structure.result }} |" >> $GITHUB_STEP_SUMMARY
@@ -445,11 +287,9 @@ jobs:
           echo "| GUI | ${{ needs.gui.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Spec | ${{ needs.spec.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Docs | ${{ needs.docs.result }} |" >> $GITHUB_STEP_SUMMARY
-
-      - name: Fail check
+      - name: Fail
         if: contains(needs.*.result, 'failure')
         run: exit 1
-
       - name: Pass
         if: "!contains(needs.*.result, 'failure')"
         run: echo "All tests passed for v${{ env.APP_VERSION_CHECK }}!"

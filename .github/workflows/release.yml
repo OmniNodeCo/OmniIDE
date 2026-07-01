@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: "Version tag (e.g. v1.0.5)"
+        description: "Version tag (e.g. v1.0.7)"
         required: true
-        default: "v1.0.5"
+        default: "v1.0.7"
 
 permissions:
   contents: write
@@ -29,9 +29,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-          cache: "pip"
+        with: { python-version: "3.11", cache: "pip" }
       - run: pip install --upgrade pip && pip install -r requirements.txt pyinstaller pillow
       - name: Icon
         shell: python
@@ -47,7 +45,7 @@ jobs:
               imgs.append(i)
           imgs[0].save("assets/icon.ico",format="ICO",sizes=[(s,s) for s in sizes],append_images=imgs[1:])
           imgs[-1].save("assets/icon.png",format="PNG")
-      - name: Patch spec
+      - name: Patch
         shell: python
         run: |
           with open("OmniIDE.spec") as f: c=f.read()
@@ -57,10 +55,7 @@ jobs:
       - run: pyinstaller OmniIDE.spec
       - run: if (Test-Path "dist/OmniIDE.exe") { Write-Host "OK" } else { exit 1 }
       - uses: actions/upload-artifact@v4
-        with:
-          name: OmniIDE-Windows
-          path: dist/OmniIDE.exe
-          retention-days: 5
+        with: { name: OmniIDE-Windows, path: dist/OmniIDE.exe, retention-days: 5 }
 
   build-macos:
     name: "macOS"
@@ -68,9 +63,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-          cache: "pip"
+        with: { python-version: "3.11", cache: "pip" }
       - run: pip install --upgrade pip && pip install -r requirements.txt pyinstaller pillow
       - name: Icon
         shell: python3 {0}
@@ -89,10 +82,7 @@ jobs:
       - run: pyinstaller OmniIDE.spec
       - run: cd dist && ([ -d OmniIDE.app ] && zip -r OmniIDE-macOS.zip OmniIDE.app || (chmod +x OmniIDE && zip -r OmniIDE-macOS.zip OmniIDE))
       - uses: actions/upload-artifact@v4
-        with:
-          name: OmniIDE-macOS
-          path: dist/OmniIDE-macOS.zip
-          retention-days: 5
+        with: { name: OmniIDE-macOS, path: dist/OmniIDE-macOS.zip, retention-days: 5 }
 
   build-linux:
     name: "Linux"
@@ -100,9 +90,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-          cache: "pip"
+        with: { python-version: "3.11", cache: "pip" }
       - run: |
           sudo apt-get update -y
           sudo apt-get install -y ${{ env.QT_DEPS }} binutils
@@ -124,10 +112,7 @@ jobs:
       - run: pyinstaller OmniIDE.spec
       - run: chmod +x dist/OmniIDE && cd dist && tar -czvf OmniIDE-Linux.tar.gz OmniIDE
       - uses: actions/upload-artifact@v4
-        with:
-          name: OmniIDE-Linux
-          path: dist/OmniIDE-Linux.tar.gz
-          retention-days: 5
+        with: { name: OmniIDE-Linux, path: dist/OmniIDE-Linux.tar.gz, retention-days: 5 }
 
   release:
     name: "Publish"
@@ -141,7 +126,6 @@ jobs:
         with: { name: OmniIDE-macOS, path: release/mac/ }
       - uses: actions/download-artifact@v4
         with: { name: OmniIDE-Linux, path: release/linux/ }
-      - run: find release/ -type f -exec ls -lh {} \;
       - name: Tag
         run: |
           git config user.name "github-actions"
@@ -181,11 +165,3 @@ jobs:
             release/linux/OmniIDE-Linux.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      - name: Summary
-        run: |
-          echo "## Release ${{ env.APP_VERSION }}" >> $GITHUB_STEP_SUMMARY
-          echo "| Platform | Size |" >> $GITHUB_STEP_SUMMARY
-          echo "|----------|------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Windows | $(du -h release/win/OmniIDE.exe|cut -f1) |" >> $GITHUB_STEP_SUMMARY
-          echo "| macOS | $(du -h release/mac/OmniIDE-macOS.zip|cut -f1) |" >> $GITHUB_STEP_SUMMARY
-          echo "| Linux | $(du -h release/linux/OmniIDE-Linux.tar.gz|cut -f1) |" >> $GITHUB_STEP_SUMMARY

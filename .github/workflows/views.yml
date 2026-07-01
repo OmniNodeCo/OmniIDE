@@ -1,45 +1,36 @@
-# Views Badge Counter
-# Uses OmniNodeCo/views-badge action
-# @see https://github.com/OmniNodeCo/views-badge
-name: Count Views
+name: Views
 
 on:
-  # Runs whenever anyone opens a PR or issue (real traffic signal)
-  pull_request:
-    types: [opened]
-  issues:
-    types: [opened]
-  # Runs on every push to main
-  push:
-    branches: [main, master]
-  # Daily cleanup run
-  schedule:
-    - cron: '0 0 * * *'
-  # Manual trigger
   workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * 1"
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  count:
+  check:
+    name: "Verify Badges"
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Count View
-        uses: OmniNodeCo/views-badge@main
-        with:
-          token:       ${{ secrets.GITHUB_TOKEN }}
-          visitor:     ${{ github.actor }}
-          output_file: .views/badge.json
-          config_file: .viewsbadge
-
-      - name: Commit badge data
+      - uses: actions/checkout@v4
+      - name: Check badges
         run: |
-          git config user.name  "views-badge[bot]"
-          git config user.email "views-badge[bot]@users.noreply.github.com"
-          git add .views/
-          git diff --staged --quiet || git commit -m "chore: update view count [skip ci]"
-          git push
+          PASS=0; WARN=0
+          check() { if grep -q "$1" README.md; then echo "  OK: $2"; PASS=$((PASS+1)); else echo "  WARN: $2"; WARN=$((WARN+1)); fi; }
+          check "komarev.com/ghpvc" "Profile view counter"
+          check "img.shields.io/github/stars" "Stars badge"
+          check "img.shields.io/github/forks" "Forks badge"
+          check "img.shields.io/github/issues" "Issues badge"
+          check "img.shields.io/github/v/release" "Release badge"
+          check "img.shields.io/github/actions/workflow/status" "Build badge"
+          check "1.0.7" "Version 1.0.7"
+          check "PyQt6" "PyQt6 mention"
+          echo ""; echo "$PASS passed, $WARN warnings"
+      - name: Docs check
+        run: |
+          [ -f docs/index.html ] && grep -q "1.0.7" docs/index.html && echo "Docs v1.0.7 OK" || echo "WARN: docs version"
+      - name: Summary
+        run: |
+          echo "## Badge Check v1.0.7" >> $GITHUB_STEP_SUMMARY
+          echo "Badges auto-update via komarev.com and shields.io" >> $GITHUB_STEP_SUMMARY
