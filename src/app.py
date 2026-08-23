@@ -8,7 +8,7 @@ from PyQt6.QtWidgets import (
     QHBoxLayout, QFileDialog, QMessageBox, QApplication,
 )
 from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QFont, QFontDatabase, QIcon
+from PyQt6.QtGui import QFont, QFontDatabase, QIcon, QShortcut, QKeySequence
 
 from src.config import (
     APP_NAME, APP_VERSION, APP_AUTHOR,
@@ -21,7 +21,8 @@ from src.core.git_manager import GitManager
 from src.core.git_installer import GitInstaller
 from src.core.extension_manager import ExtensionManager
 from src.core.updater import Updater
-from src.ui.editor_widget import EditorTabWidget
+from src.ui.editor_widget import EditorTabWidget, BreadcrumbBar
+from src.ui.minimap import Minimap
 from src.ui.sidebar import Sidebar
 from src.ui.terminal_widget import TerminalWidget
 from src.ui.toolbar import Toolbar
@@ -90,6 +91,7 @@ class OmniIDEApp(QMainWindow):
         QApplication.processEvents()
 
         self._setup_shortcuts()
+        self._setup_autosave()
 
         self.splash.set_progress(100)
         self.splash.set_status("Ready!")
@@ -109,7 +111,8 @@ class OmniIDEApp(QMainWindow):
             try:
                 with open(SETTINGS_PATH, "r") as f:
                     saved = json.load(f)
-                return {**DEFAULT_SETTINGS, **saved}
+                merged = {**DEFAULT_SETTINGS, **saved}
+                return merged
             except Exception:
                 pass
         return DEFAULT_SETTINGS.copy()
@@ -147,13 +150,28 @@ class OmniIDEApp(QMainWindow):
         right_layout.setContentsMargins(0, 0, 0, 0)
         right_layout.setSpacing(0)
 
+        # Breadcrumbs
+        self.breadcrumbs = BreadcrumbBar(self)
+        right_layout.addWidget(self.breadcrumbs)
+
         # Editor/terminal splitter
         self.editor_terminal_splitter = QSplitter(Qt.Orientation.Vertical)
         right_layout.addWidget(self.editor_terminal_splitter)
 
-        # Editor tabs
+        # Editor tabs + minimap (side by side)
+        editor_row = QWidget()
+        editor_row_layout = QHBoxLayout(editor_row)
+        editor_row_layout.setContentsMargins(0, 0, 0, 0)
+        editor_row_layout.setSpacing(0)
+
         self.editor_tabs = EditorTabWidget(self)
-        self.editor_terminal_splitter.addWidget(self.editor_tabs)
+        editor_row_layout.addWidget(self.editor_tabs, 1)
+
+        self.minimap = Minimap(self)
+        editor_row_layout.addWidget(self.minimap, 0)
+        self.minimap.setVisible(bool(self.settings.get("minimap_enabled")))
+
+        self.editor_terminal_splitter.addWidget(editor_row)
 
         # Terminal
         self.terminal = TerminalWidget(self)
@@ -171,6 +189,17 @@ class OmniIDEApp(QMainWindow):
         # Menu bar
         MenuBarBuilder(self)
 
+        # Follow editor for breadcrumbs + minimap
+        self.editor_tabs.tabs.currentChanged.connect(self._on_editor_tab_changed)
+
+    def _on_editor_tab_changed(self, _index):
+        self.breadcrumbs.refresh()
+        editor = self.editor_tabs.get_current_code_editor()
+        if self.settings.get("minimap_enabled"):
+            self.minimap.attach(editor)
+        else:
+            self.minimap.attach(None)
+
     def _apply_theme(self):
         stylesheet = build_stylesheet(self.colors)
         self.setStyleSheet(stylesheet)
@@ -186,24 +215,34 @@ class OmniIDEApp(QMainWindow):
         self.syntax_colors = self.theme_loader.syntax
         self._apply_theme()
         self.editor_tabs.refresh_all()
+        self.breadcrumbs.refresh_colors()
         self.save_settings()
         self.set_status(f"Theme: {self.settings['theme'].title()}")
 
     def _setup_shortcuts(self):
-        from PyQt6.QtGui import QShortcut, QKeySequence
-
         shortcuts = {
             "Ctrl+N": self.file_manager.new_file,
             "Ctrl+O": self.file_manager.open_file,
             "Ctrl+S": self.file_manager.save_file,
             "Ctrl+Shift+S": self.file_manager.save_file_as,
+            "Ctrl+Alt+S": self.file_manager.save_all,
             "Ctrl+W": self.editor_tabs.close_current_tab,
             "Ctrl+F": self.toggle_search,
             "Ctrl+B": self.toggle_sidebar,
             "Ctrl+`": self.toggle_terminal,
             "Ctrl+Shift+P": self.open_command_palette,
+            "Ctrl+P": self.open_quick_open,
+            "Ctrl+Shift+F": self.open_search,
+            "Ctrl+Shift+T": self.new_terminal,
             "Ctrl+,": self.open_settings,
             "Ctrl+G": self.go_to_line,
+            "Ctrl+/": self.toggle_comment,
+            "Ctrl+D": self.duplicate_line,
+            "Ctrl+Shift+D": self.delete_line,
+            "Alt+Up": self.move_line_up,
+            "Alt+Down": self.move_line_down,
+            "Ctrl+Shift+O": self.sort_lines,
+            "Ctrl+Shift+V": self.toggle_markdown_preview,
             "Ctrl+=": lambda: self._zoom(1),
             "Ctrl+-": lambda: self._zoom(-1),
             "Ctrl+0": lambda: self._zoom(0),
@@ -212,6 +251,15 @@ class OmniIDEApp(QMainWindow):
         for key, func in shortcuts.items():
             shortcut = QShortcut(QKeySequence(key), self)
             shortcut.activated.connect(func)
+
+    def _setup_autosave(self):
+        self._autosave_timer = QTimer(self)
+        self._autosave_timer.setInterval(
+            max(5, self.settings.get("auto_save_interval", 30)) * 1000
+        )
+        self._autosave_timer.timeout.connect(self.file_manager.autosave_tick)
+        if self.settings.get("auto_save"):
+            self._autosave_timer.start()
 
     def set_status(self, text):
         self.statusbar.set_text(text)
@@ -225,26 +273,121 @@ class OmniIDEApp(QMainWindow):
     def toggle_search(self):
         self.editor_tabs.toggle_search()
 
+    def toggle_comment(self):
+        editor = self.editor_tabs.get_current_code_editor()
+        if editor:
+            editor.toggle_comment()
+
+    def duplicate_line(self):
+        editor = self.editor_tabs.get_current_code_editor()
+        if editor:
+            editor.duplicate_line()
+
+    def delete_line(self):
+        editor = self.editor_tabs.get_current_code_editor()
+        if editor:
+            editor.delete_line()
+
+    def move_line_up(self):
+        editor = self.editor_tabs.get_current_code_editor()
+        if editor:
+            editor.move_line_up()
+
+    def move_line_down(self):
+        editor = self.editor_tabs.get_current_code_editor()
+        if editor:
+            editor.move_line_down()
+
+    def sort_lines(self):
+        editor = self.editor_tabs.get_current_code_editor()
+        if editor:
+            editor.sort_lines()
+
     def open_command_palette(self):
         dialog = CommandPaletteDialog(self)
         dialog.exec()
 
+    def open_quick_open(self):
+        if not self.current_project_path:
+            self.set_status("Open a folder to use Quick Open")
+            return
+        from src.ui.quick_open import QuickOpenDialog
+        dialog = QuickOpenDialog(self)
+        dialog.exec()
+
+    def open_search(self):
+        self.sidebar._switch("search")
+        self.sidebar.search_panel.search_input.setFocus()
+        self.set_status("Search in Files")
+
+    def new_terminal(self):
+        self.terminal.new_terminal()
+        self.set_status("New terminal")
+
     def open_settings(self):
         dialog = SettingsDialog(self)
+        dialog.accepted.connect(self._on_settings_applied)
         dialog.exec()
+
+    def _on_settings_applied(self):
+        self._setup_autosave()
+        if self.settings.get("auto_save"):
+            self._autosave_timer.start()
+        else:
+            self._autosave_timer.stop()
+        self.minimap.setVisible(bool(self.settings.get("minimap_enabled")))
+        self.editor_tabs.apply_font()
+        self.editor_tabs.apply_word_wrap()
+        self.sidebar.file_tree.set_show_hidden(
+            bool(self.settings.get("show_hidden_files")))
+
+    def toggle_markdown_preview(self):
+        editor = self.editor_tabs.get_current_code_editor()
+        if not editor or not getattr(editor, "filepath", None):
+            self.set_status("Open a .md file first")
+            return
+        path = editor.filepath
+        if os.path.splitext(path)[1].lower() != ".md":
+            self.set_status("Markdown preview works on .md files")
+            return
+        try:
+            with open(path, "r", encoding="utf-8", errors="replace") as f:
+                md = f.read()
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Cannot read file:\n{e}")
+            return
+        from src.core.markdown import to_html, wrap_page
+        c = self.colors
+        css = f"""
+        body {{ font-family: 'Segoe UI', sans-serif; font-size: 14px;
+               line-height: 1.6; color: {c['editor_fg']}; }}
+        body {{ background-color: {c['editor_bg']}; }}
+        pre {{ background: {c['terminal_bg']}; padding: 12px;
+              border-radius: 6px; overflow-x: auto; }}
+        code {{ background: {c['bg_tertiary']}; padding: 2px 5px;
+               border-radius: 4px; font-family: 'Consolas', monospace; }}
+        pre code {{ background: none; padding: 0; }}
+        a {{ color: {c['accent']}; }}
+        table {{ border-collapse: collapse; margin: 8px 0; }}
+        th, td {{ border: 1px solid {c['border']}; padding: 6px 10px; }}
+        blockquote {{ border-left: 3px solid {c['accent']}; margin: 8px 0;
+                     padding: 4px 12px; color: {c['fg_secondary']}; }}
+        img {{ max-width: 100%; }}
+        h1, h2, h3, h4 {{ margin-top: 1.2em; }}
+        hr {{ border: none; border-top: 1px solid {c['border']}; margin: 16px 0; }}
+        """
+        html = wrap_page(to_html(md), os.path.basename(path), css=css)
+        self.editor_tabs.new_preview_tab(html, f"{os.path.basename(path)} (preview)")
+        self.set_status("Markdown preview")
 
     def go_to_line(self):
         from PyQt6.QtWidgets import QInputDialog
-        editor = self.editor_tabs.get_current_editor()
+        editor = self.editor_tabs.get_current_code_editor()
         if not editor:
             return
         line, ok = QInputDialog.getInt(self, "Go to Line", "Line:", 1, 1, 999999)
         if ok:
-            cursor = editor.textCursor()
-            block = editor.document().findBlockByLineNumber(line - 1)
-            cursor.setPosition(block.position())
-            editor.setTextCursor(cursor)
-            editor.centerCursor()
+            editor.goto_line(line)
             self.set_status(f"Line {line}")
 
     def open_project(self, path=None):
@@ -256,6 +399,20 @@ class OmniIDEApp(QMainWindow):
             self.setWindowTitle(f"{APP_NAME} — {os.path.basename(path)} — {APP_AUTHOR}")
             self.set_status(f"Project: {path}")
             self.git_manager.detect_repo(path)
+
+    def toggle_minimap(self):
+        self.settings["minimap_enabled"] = not self.settings.get("minimap_enabled", False)
+        self.minimap.setVisible(bool(self.settings["minimap_enabled"]))
+        if self.settings["minimap_enabled"]:
+            self.minimap.attach(self.editor_tabs.get_current_code_editor())
+        self.save_settings()
+        self.set_status(f"Minimap: {'on' if self.settings['minimap_enabled'] else 'off'}")
+
+    def toggle_hidden_files(self):
+        self.settings["show_hidden_files"] = not self.settings.get("show_hidden_files", False)
+        self.sidebar.file_tree.set_show_hidden(self.settings["show_hidden_files"])
+        self.save_settings()
+        self.set_status(f"Hidden files: {'shown' if self.settings['show_hidden_files'] else 'hidden'}")
 
     def check_for_updates(self):
         self.updater.check_now(silent=False)

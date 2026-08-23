@@ -1,6 +1,6 @@
 """Menu bar builder — PyQt6."""
 
-from PyQt6.QtGui import QAction
+from PyQt6.QtGui import QAction, QKeySequence, QShortcut
 
 
 class MenuBarBuilder:
@@ -16,10 +16,14 @@ class MenuBarBuilder:
         self._add(file_menu, "Open File", "Ctrl+O", app.file_manager.open_file)
         self._add(file_menu, "Open Folder", "", lambda: app.open_project())
         file_menu.addSeparator()
+        self._add(file_menu, "Quick Open", "Ctrl+P", app.open_quick_open)
         self._add(file_menu, "Save", "Ctrl+S", app.file_manager.save_file)
         self._add(file_menu, "Save As", "Ctrl+Shift+S", app.file_manager.save_file_as)
+        self._add(file_menu, "Save All", "Ctrl+Alt+S", app.file_manager.save_all)
         file_menu.addSeparator()
         self._add(file_menu, "Close Tab", "Ctrl+W", app.editor_tabs.close_current_tab)
+        self._add(file_menu, "Close Other Tabs", "", app.editor_tabs.close_other_tabs)
+        self._add(file_menu, "Close All Tabs", "", app.editor_tabs.close_all_tabs)
         file_menu.addSeparator()
         self._add(file_menu, "Settings", "Ctrl+,", lambda: app.open_settings())
         file_menu.addSeparator()
@@ -29,14 +33,32 @@ class MenuBarBuilder:
         edit_menu = menubar.addMenu("Edit")
         self._add(edit_menu, "Find & Replace", "Ctrl+F", app.toggle_search)
         self._add(edit_menu, "Go to Line", "Ctrl+G", app.go_to_line)
+        edit_menu.addSeparator()
+        self._add(edit_menu, "Toggle Comment", "Ctrl+/", app.toggle_comment)
+        self._add(edit_menu, "Duplicate Line", "Ctrl+D", app.duplicate_line)
+        self._add(edit_menu, "Delete Line", "Ctrl+Shift+D", app.delete_line)
+        self._add(edit_menu, "Move Line Up", "Alt+Up", app.move_line_up)
+        self._add(edit_menu, "Move Line Down", "Alt+Down", app.move_line_down)
+        self._add(edit_menu, "Sort Lines", "Ctrl+Shift+O", app.sort_lines)
+        edit_menu.addSeparator()
+        self._add(edit_menu, "Line Endings: LF", "",
+                  lambda: app.file_manager.convert_line_endings("lf"))
+        self._add(edit_menu, "Line Endings: CRLF", "",
+                  lambda: app.file_manager.convert_line_endings("crlf"))
 
         # View
         view_menu = menubar.addMenu("View")
         self._add(view_menu, "Command Palette", "Ctrl+Shift+P", app.open_command_palette)
+        self._add(view_menu, "Search in Files", "Ctrl+Shift+F", app.open_search)
         view_menu.addSeparator()
         self._add(view_menu, "Toggle Sidebar", "Ctrl+B", app.toggle_sidebar)
         self._add(view_menu, "Toggle Terminal", "Ctrl+`", app.toggle_terminal)
+        self._add(view_menu, "New Terminal", "Ctrl+Shift+T", app.new_terminal)
         view_menu.addSeparator()
+        self._add(view_menu, "Markdown Preview", "Ctrl+Shift+V",
+                  app.toggle_markdown_preview)
+        self._add(view_menu, "Toggle Minimap", "", app.toggle_minimap)
+        self._add(view_menu, "Toggle Hidden Files", "", app.toggle_hidden_files)
         self._add(view_menu, "Switch Theme", "", app.switch_theme)
         view_menu.addSeparator()
         self._add(view_menu, "Zoom In", "Ctrl+=", lambda: app._zoom(1))
@@ -70,7 +92,7 @@ class MenuBarBuilder:
     def _add(self, menu, text, shortcut, callback):
         action = QAction(text, self.app)
         if shortcut:
-            action.setShortcut(shortcut)
+            action.setShortcut(QKeySequence(shortcut))
         action.triggered.connect(callback)
         menu.addAction(action)
 
