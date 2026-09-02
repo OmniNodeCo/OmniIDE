@@ -119,8 +119,12 @@ class CodeEditor(QPlainTextEdit):
     # ── Signals ────────────────────────────────────────────────────
     def _on_text_changed(self):
         self.modified = True
-        self.app.editor_tabs.mark_modified(self)
-        self.app.statusbar.update_cursor(self)
+        editor_tabs = getattr(self.app, "editor_tabs", None)
+        if editor_tabs is not None:
+            editor_tabs.mark_modified(self)
+        statusbar = getattr(self.app, "statusbar", None)
+        if statusbar is not None:
+            statusbar.update_cursor(self)
 
     # ── Line numbers ───────────────────────────────────────────────
     def line_number_area_width(self):
@@ -198,7 +202,8 @@ class CodeEditor(QPlainTextEdit):
         """JSON error marker + matched bracket highlight."""
         extra = []
 
-        err = getattr(self.app.statusbar, "json_error", None)
+        statusbar = getattr(self.app, "statusbar", None)
+        err = getattr(statusbar, "json_error", None) if statusbar else None
         if err and self.filepath and \
                 os.path.splitext(self.filepath)[1].lower() == ".json":
             lineno, _col = err
@@ -1037,7 +1042,9 @@ class EditorTabWidget(QWidget):
 
     def _on_tab_changed(self, index):
         widget = self.tabs.widget(index)
-        self.app.statusbar.update_cursor_position_for(widget)
+        statusbar = getattr(self.app, "statusbar", None)
+        if statusbar is not None:
+            statusbar.update_cursor_position_for(widget)
         if isinstance(widget, CodeEditor) and widget.filepath:
             ext = os.path.splitext(widget.filepath)[1].lower()
             self.app.statusbar.update_file_type(
