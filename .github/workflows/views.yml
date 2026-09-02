@@ -24,13 +24,13 @@ jobs:
           check "img.shields.io/github/issues" "Issues badge"
           check "img.shields.io/github/v/release" "Release badge"
           check "img.shields.io/github/actions/workflow/status" "Build badge"
-          check "1.0.7" "Version 1.0.7"
+          check "1.1.0" "Version 1.1.0"
           check "PyQt6" "PyQt6 mention"
           echo ""; echo "$PASS passed, $WARN warnings"
       - name: Docs check
         run: |
-          [ -f docs/index.html ] && grep -q "1.0.7" docs/index.html && echo "Docs v1.0.7 OK" || echo "WARN: docs version"
+          [ -f docs/index.html ] && grep -q "1.1.0" docs/index.html && echo "Docs v1.1.0 OK" || echo "WARN: docs version"
       - name: Summary
         run: |
-          echo "## Badge Check v1.0.7" >> $GITHUB_STEP_SUMMARY
+          echo "## Badge Check v1.1.0" >> $GITHUB_STEP_SUMMARY
           echo "Badges auto-update via komarev.com and shields.io" >> $GITHUB_STEP_SUMMARY
