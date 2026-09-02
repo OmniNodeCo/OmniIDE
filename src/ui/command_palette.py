@@ -6,6 +6,8 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QFont
 
+from src.core.fuzzy import score as fuzzy_score
+
 
 class CommandPaletteDialog(QDialog):
     """Fuzzy-searchable command palette."""
@@ -68,41 +70,89 @@ class CommandPaletteDialog(QDialog):
 
     def _build_commands(self):
         app = self.app
+        et = app.editor_tabs
         return [
             ("File: New File", "Ctrl+N", app.file_manager.new_file),
             ("File: Open File", "Ctrl+O", app.file_manager.open_file),
+            ("File: Open Folder", "", lambda: app.open_project()),
+            ("File: Quick Open", "Ctrl+P", app.open_quick_open),
             ("File: Save", "Ctrl+S", app.file_manager.save_file),
             ("File: Save As", "Ctrl+Shift+S", app.file_manager.save_file_as),
-            ("File: Close Tab", "Ctrl+W", app.editor_tabs.close_current_tab),
+            ("File: Save All", "Ctrl+Alt+S", app.file_manager.save_all),
+            ("File: Close Tab", "Ctrl+W", et.close_current_tab),
+            ("File: Close Other Tabs", "", et.close_other_tabs),
+            ("File: Close All Tabs", "", et.close_all_tabs),
             ("Edit: Find & Replace", "Ctrl+F", app.toggle_search),
             ("Edit: Go to Line", "Ctrl+G", app.go_to_line),
+            ("Edit: Toggle Comment", "Ctrl+/", app.toggle_comment),
+            ("Edit: Duplicate Line", "Ctrl+D", app.duplicate_line),
+            ("Edit: Delete Line", "Ctrl+Shift+D", app.delete_line),
+            ("Edit: Move Line Up", "Alt+Up", app.move_line_up),
+            ("Edit: Move Line Down", "Alt+Down", app.move_line_down),
+            ("Edit: Sort Lines", "Ctrl+Shift+O", app.sort_lines),
+            ("Edit: Line Endings: LF", "", lambda: app.file_manager.convert_line_endings("lf")),
+            ("Edit: Line Endings: CRLF", "", lambda: app.file_manager.convert_line_endings("crlf")),
+            ("View: Command Palette", "Ctrl+Shift+P", lambda: None),
+            ("View: Search in Files", "Ctrl+Shift+F", app.open_search),
             ("View: Toggle Sidebar", "Ctrl+B", app.toggle_sidebar),
             ("View: Toggle Terminal", "Ctrl+`", app.toggle_terminal),
+            ("View: New Terminal", "Ctrl+Shift+T", app.new_terminal),
+            ("View: Markdown Preview", "Ctrl+Shift+V", app.toggle_markdown_preview),
+            ("View: Toggle Minimap", "", app.toggle_minimap),
+            ("View: Toggle Hidden Files", "", app.toggle_hidden_files),
             ("View: Switch Theme", "", app.switch_theme),
             ("View: Zoom In", "Ctrl+=", lambda: app._zoom(1)),
             ("View: Zoom Out", "Ctrl+-", lambda: app._zoom(-1)),
             ("View: Reset Zoom", "Ctrl+0", lambda: app._zoom(0)),
-            ("Settings: Open Settings", "Ctrl+,", lambda: app.open_settings()),
+            ("Settings: Open Settings", "Ctrl+,", app.open_settings),
             ("Git: Clone", "", app.git_manager.clone_repo),
             ("Git: Init", "", app.git_manager.init_repo),
             ("Git: Status", "", app.git_manager.git_status),
+            ("Git: Diff", "", app.git_manager.git_diff),
+            ("Git: Log", "", app.git_manager.git_log),
+            ("Git: Branches", "", app.git_manager.git_branch),
+            ("Git: Stage All", "", app.git_manager.git_add_all),
             ("Git: Commit", "", app.git_manager.git_commit),
             ("Git: Push", "", app.git_manager.git_push),
             ("Git: Pull", "", app.git_manager.git_pull),
+            ("Git: Set Remote", "", app.git_manager.add_remote),
             ("Terminal: Clear", "", lambda: app.terminal.clear()),
+            ("Terminal: New Terminal", "Ctrl+Shift+T", app.new_terminal),
             ("Terminal: Restart", "", lambda: app.terminal._restart()),
             ("Update: Check for Updates", "", app.check_for_updates),
+            ("OmniIDE: About", "", self._about),
         ]
+
+    def _about(self):
+        from PyQt6.QtWidgets import QMessageBox
+        from src.config import APP_VERSION
+        QMessageBox.about(
+            self.app, "About OmniIDE",
+            f"OmniIDE v{APP_VERSION}\n\n"
+            f"Built from scratch by OmniNodeCo.\n"
+            f"No Electron. No bloat. Pure speed.",
+        )
 
     def _filter(self, query):
         self.list.clear()
-        q = query.lower()
+        q = query.strip()
+
+        # Score every command; keep matches above a floor
+        scored = []
         for label, shortcut, action in self.commands:
-            if not q or q in label.lower():
-                text = f"{label}    {shortcut}" if shortcut else label
-                item = QListWidgetItem(text)
-                item.setData(Qt.ItemDataRole.UserRole, action)
-                self.list.addItem(item)
+            if not q:
+                scored.append((1, label, shortcut, action))
+                continue
+            s = fuzzy_score(q, label)
+            if s > 6:
+                scored.append((s, label, shortcut, action))
+
+        scored.sort(key=lambda t: (-t[0], t[1].lower()))
+        for _s, label, shortcut, action in scored[:40]:
+            text = f"{label}    {shortcut}" if shortcut else label
+            item = QListWidgetItem(text)
+            item.setData(Qt.ItemDataRole.UserRole, action)
+            self.list.addItem(item)
 
         if self.list.count() > 0:
             self.list.setCurrentRow(0)

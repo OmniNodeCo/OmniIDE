@@ -20,6 +20,7 @@ class FileTree(QWidget):
     def __init__(self, app):
         super().__init__()
         self.app = app
+        self._root_path = None
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -40,12 +41,78 @@ class FileTree(QWidget):
         self.tree.setAnimated(True)
         self.tree.setIndentation(16)
         self.tree.doubleClicked.connect(self._on_double_click)
+        self.tree.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.tree.customContextMenuRequested.connect(self._context_menu)
 
         layout.addWidget(self.tree)
 
     def load_directory(self, path):
+        self._root_path = path
         self.model.setRootPath(path)
         self.tree.setRootIndex(self.model.index(path))
+
+    def refresh(self):
+        if self._root_path and os.path.isdir(self._root_path):
+            self.model.setRootPath("")
+            self.model.setRootPath(self._root_path)
+            self.tree.setRootIndex(self.model.index(self._root_path))
+
+    def set_show_hidden(self, show):
+        if show:
+            self.model.setFilter(
+                QDir.Filter.AllDirs | QDir.Filter.Files | QDir.Filter.ShowHidden
+            )
+        else:
+            self.model.setFilter(
+                QDir.Filter.AllDirs | QDir.Filter.Files
+                | QDir.Filter.NoDotAndDotDot
+            )
+        self.refresh()
+
+    def expand_to(self, path):
+        """Expand the tree so ``path`` is visible, and select it."""
+        if not self._root_path:
+            return
+        index = self.model.index(path)
+        if not index.isValid():
+            return
+        # Expand parents bottom-up
+        parent = index.parent()
+        chain = []
+        while parent.isValid() and parent != self.tree.rootIndex():
+            chain.append(parent)
+            parent = parent.parent()
+        for node in reversed(chain):
+            self.tree.expand(node)
+        self.tree.scrollTo(index)
+        self.tree.setCurrentIndex(index)
+
+    def _context_menu(self, pos):
+        index = self.tree.indexAt(pos)
+        if not index.isValid():
+            return
+        path = self.model.filePath(index)
+        if not path:
+            return
+
+        from PyQt6.QtWidgets import QMenu
+        menu = QMenu(self)
+        if os.path.isfile(path):
+            menu.addAction("Open", lambda: self.app.file_manager.open_file(path))
+            menu.addSeparator()
+        else:
+            menu.addAction("New File",
+                           lambda: self.app.file_manager.new_file_in(path))
+            menu.addAction("New Folder",
+                           lambda: self.app.file_manager.new_folder_in(path))
+            menu.addSeparator()
+
+        menu.addAction("Rename", lambda: self.app.file_manager.rename_path(path))
+        menu.addAction("Delete", lambda: self.app.file_manager.delete_path(path))
+        menu.addSeparator()
+        menu.addAction("Copy Path",
+                       lambda: self.app.file_manager.copy_path_to_clipboard(path))
+        menu.exec(self.tree.viewport().mapToGlobal(pos))
 
     def _on_double_click(self, index: QModelIndex):
         path = self.model.filePath(index)
@@ -105,6 +172,15 @@ class ExplorerPanel(QWidget):
         open_btn.clicked.connect(app.file_manager.open_file)
         btn_row.addWidget(open_btn)
 
+        refresh_btn = QPushButton()
+        refresh_btn.setIcon(svg_icon("refresh", 14))
+        refresh_btn.setToolTip("Refresh file tree")
+        refresh_btn.setFixedWidth(28)
+        refresh_btn.setProperty("cssClass", "icon")
+        refresh_btn.clicked.connect(self.file_tree_refresh)
+        btn_row.addWidget(refresh_btn)
+        btn_row.addStretch()
+
         layout.addLayout(btn_row)
 
         folder_btn = _icon_btn("Open Folder", "files")
@@ -115,6 +191,10 @@ class ExplorerPanel(QWidget):
 
         self.file_tree = FileTree(app)
         layout.addWidget(self.file_tree, 1)
+
+    def file_tree_refresh(self):
+        self.file_tree.refresh()
+        self.app.set_status("File tree refreshed")
 
 
 class GitPanel(QWidget):
@@ -477,6 +557,7 @@ class Sidebar(QWidget):
         self.tab_buttons = {}
         tabs = [
             ("explorer", "files", "Explorer"),
+            ("search", "search", "Search (Ctrl+Shift+F)"),
             ("git", "git", "Git"),
             ("extensions", "extensions", "Extensions"),
         ]
@@ -502,6 +583,10 @@ class Sidebar(QWidget):
         self.explorer_panel = ExplorerPanel(app)
         self.stack.addWidget(self.explorer_panel)
 
+        from src.ui.search_panel import SearchPanel
+        self.search_panel = SearchPanel(app)
+        self.stack.addWidget(self.search_panel)
+
         self.git_panel = GitPanel(app)
         self.stack.addWidget(self.git_panel)
 
@@ -514,7 +599,7 @@ class Sidebar(QWidget):
         self._switch("explorer")
 
     def _switch(self, panel_id):
-        panels = {"explorer": 0, "git": 1, "extensions": 2}
+        panels = {"explorer": 0, "search": 1, "git": 2, "extensions": 3}
         self.stack.setCurrentIndex(panels.get(panel_id, 0))
         for tid, btn in self.tab_buttons.items():
             btn.setChecked(tid == panel_id)

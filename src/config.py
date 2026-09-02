@@ -4,7 +4,7 @@ import os
 import sys
 
 APP_NAME = "OmniIDE"
-APP_VERSION = "1.0.7"
+APP_VERSION = "1.1.0"
 APP_AUTHOR = "OmniNodeCo"
 APP_REPO = "OmniNodeCo/OmniIDE"
 APP_GITHUB_API = f"https://api.github.com/repos/{APP_REPO}/releases/latest"
@@ -41,10 +41,13 @@ DEFAULT_SETTINGS = {
     "font_family": "Consolas",
     "font_size": 13,
     "tab_size": 4,
+    "indent_with_tabs": False,
     "show_line_numbers": True,
     "word_wrap": False,
     "auto_indent": True,
     "auto_save": False,
+    "auto_save_interval": 30,
+    "line_ending": "lf",
     "auto_check_updates": True,
     "window_width": 1200,
     "window_height": 750,
@@ -58,6 +61,9 @@ DEFAULT_SETTINGS = {
     "cursor_blink": True,
     "minimap_enabled": False,
     "suppress_git_prompt": False,
+    "show_hidden_files": False,
+    "max_search_results": 1000,
+    "smart_brackets": True,
 }
 
 SUPPORTED_EXTENSIONS = {
@@ -68,7 +74,9 @@ SUPPORTED_EXTENSIONS = {
     ".sql": "SQL", ".c": "C", ".cpp": "C++", ".h": "C Header",
     ".java": "Java", ".rb": "Ruby", ".php": "PHP", ".go": "Go",
     ".rs": "Rust", ".ts": "TypeScript", ".tsx": "TypeScript React",
-    ".jsx": "JavaScript React",
+    ".jsx": "JavaScript React", ".lua": "Lua", ".swift": "Swift",
+    ".kt": "Kotlin", ".dart": "Dart", ".vue": "Vue", ".svelte": "Svelte",
+    ".r": "R", ".pl": "Perl", ".ex": "Elixir", ".scss": "SCSS",
 }
 
 FILE_DIALOG_TYPES = "All Files (*);;Python (*.py);;JavaScript (*.js);;HTML (*.html *.htm);;CSS (*.css);;JSON (*.json);;Text (*.txt);;Markdown (*.md)"

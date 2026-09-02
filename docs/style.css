@@ -630,6 +630,21 @@ section h2 {
     line-height: 1.6;
 }
 
+.feature-card h3 .new-badge,
+.new-badge {
+    display: inline-block;
+    vertical-align: middle;
+    margin-left: 8px;
+    padding: 2px 8px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #11111b;
+    background: linear-gradient(135deg, #a6e3a1, #94e2d5);
+    border-radius: 20px;
+}
+
 /* ══════════════════════════════════════════
    SCREENSHOTS
    ══════════════════════════════════════════ */

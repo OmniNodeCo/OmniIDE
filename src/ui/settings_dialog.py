@@ -79,13 +79,22 @@ class SettingsDialog(QDialog):
         self._spin("Font Size", "font_size", s["font_size"], 8, 32)
         self._check("Highlight Current Line", "highlight_current_line", s.get("highlight_current_line", True))
         self._check("Cursor Blink", "cursor_blink", s.get("cursor_blink", True))
+        self._check("Show Minimap", "minimap_enabled", s.get("minimap_enabled", False))
 
         self._section("Editor")
         self._spin("Tab Size", "tab_size", s["tab_size"], 2, 8)
+        self._check("Indent with Tabs", "indent_with_tabs", s.get("indent_with_tabs", False))
+        self._combo("Line Ending", "line_ending", s.get("line_ending", "lf"), ["lf", "crlf", "cr"])
         self._check("Word Wrap", "word_wrap", s.get("word_wrap", False))
         self._check("Auto Indent", "auto_indent", s.get("auto_indent", True))
         self._check("Line Numbers", "show_line_numbers", s.get("show_line_numbers", True))
+        self._check("Smart Brackets", "smart_brackets", s.get("smart_brackets", True))
         self._check("Auto Save", "auto_save", s.get("auto_save", False))
+        self._spin("Auto Save Interval (s)", "auto_save_interval", s.get("auto_save_interval", 30), 5, 600)
+
+        self._section("Files")
+        self._check("Show Hidden Files", "show_hidden_files", s.get("show_hidden_files", False))
+        self._spin("Max Search Results", "max_search_results", s.get("max_search_results", 1000), 100, 10000)
 
         self._section("Terminal")
         self._combo("Shell", "default_shell", s.get("default_shell", "auto"),
@@ -175,6 +184,22 @@ class SettingsDialog(QDialog):
                 editor = self.app.editor_tabs.tabs.widget(i)
                 if hasattr(editor, "setLineWrapMode"):
                     editor.setLineWrapMode(mode)
+        elif key == "minimap_enabled":
+            self.app.minimap.setVisible(bool(value))
+            if value:
+                self.app.minimap.attach(
+                    self.app.editor_tabs.get_current_code_editor())
+        elif key == "show_hidden_files":
+            self.app.sidebar.file_tree.set_show_hidden(bool(value))
+        elif key == "auto_save":
+            if value:
+                self.app._autosave_timer.start()
+            else:
+                self.app._autosave_timer.stop()
+        elif key == "auto_save_interval":
+            self.app._autosave_timer.setInterval(max(5, int(value)) * 1000)
+        elif key == "tab_size":
+            self.app.editor_tabs.apply_font()
 
         self.app.save_settings()
 
