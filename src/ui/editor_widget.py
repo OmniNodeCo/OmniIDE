@@ -8,7 +8,7 @@ from PyQt6.QtWidgets import (
     QLabel, QFrame, QLineEdit, QPushButton, QCheckBox, QTextEdit,
     QMenu, QTextBrowser,
 )
-from PyQt6.QtCore import Qt, QRect, QSize, QRegularExpression, QTimer
+from PyQt6.QtCore import Qt, QRect, QSize, QRegularExpression, QTimer, QEvent
 from PyQt6.QtGui import (
     QFont, QColor, QPainter, QTextFormat, QSyntaxHighlighter,
     QTextCharFormat, QTextCursor, QDragEnterEvent, QAction,
@@ -16,6 +16,25 @@ from PyQt6.QtGui import (
 
 from src.config import APP_NAME, APP_VERSION, APP_AUTHOR, SUPPORTED_EXTENSIONS
 from src.core import code_actions
+from src.ui.icons import svg_icon
+
+
+def _tab_icon_for(filepath):
+    """Pick a file-type tab icon for a path."""
+    if not filepath:
+        return svg_icon("file_generic", 14)
+    ext = os.path.splitext(filepath)[1].lower()
+    mapping = {
+        ".py": "file_py", ".pyw": "file_py",
+        ".js": "file_js", ".jsx": "file_js", ".mjs": "file_js",
+        ".ts": "file_ts", ".tsx": "file_ts",
+        ".html": "file_html", ".htm": "file_html",
+        ".css": "file_css", ".scss": "file_css", ".less": "file_css",
+        ".json": "file_json",
+        ".md": "file_md", ".markdown": "file_md",
+        ".sh": "file_sh", ".bash": "file_sh", ".zsh": "file_sh",
+    }
+    return svg_icon(mapping.get(ext, "file_generic"), 14)
 
 
 class LineNumberArea(QWidget):
@@ -116,6 +135,92 @@ class CodeEditor(QPlainTextEdit):
             self.document(), app.syntax_colors, filepath
         )
 
+        # Overlay paints (whitespace, indent guides)
+        self.viewport().installEventFilter(self)
+
+    # ── Overlays: whitespace + indent guides ─────────────────────
+    def eventFilter(self, obj, event):
+        if obj is self.viewport() and event.type() == QEvent.Type.Paint:
+            result = super().eventFilter(obj, event)
+            try:
+                self._paint_overlays()
+            except Exception:
+                pass  # overlays are cosmetic; never crash on paint
+            return result
+        return super().eventFilter(obj, event)
+
+    def _paint_overlays(self):
+        c = self.app.colors
+        show_ws = bool(self.app.settings.get("show_whitespace", False))
+        show_guides = bool(self.app.settings.get("indent_guides", True))
+        if not (show_ws or show_guides):
+            return
+
+        pm = self.fontMetrics()
+        cw = pm.horizontalAdvance(" ")
+        tab_size = max(1, int(self.app.settings.get("tab_size", 4)))
+
+        painter = QPainter(self.viewport())
+
+        ws_color = QColor(c.get("fg_secondary", "#a6adc8"))
+        ws_color.setAlpha(110)
+        guide_color = QColor(c.get("border", "#45475a"))
+        guide_color.setAlpha(90)
+
+        block = self.firstVisibleBlock()
+        viewport_h = self.viewport().height()
+        while block.isValid():
+            geom = self.blockBoundingGeometry(block).translated(self.contentOffset())
+            top = round(geom.top())
+            height = round(geom.height())
+            if top > viewport_h:
+                break
+
+            text = block.text()
+            pos_cursor = self.textCursor()
+            pos_cursor.setPosition(block.position())
+            base_x = self.cursorRect(pos_cursor).x()
+
+            # Indent guides: one line per indent level present on this line
+            if show_guides and text:
+                indent = 0
+                for ch in text:
+                    if ch == "\t":
+                        indent += tab_size
+                    elif ch == " ":
+                        indent += 1
+                    else:
+                        break
+                if indent > 0:
+                    painter.setPen(guide_color)
+                    for level in range(1, indent // tab_size + 1):
+                        x_line = base_x + level * tab_size * cw
+                        painter.drawLine(x_line, top, x_line, top + height)
+
+            # Whitespace glyphs
+            if show_ws:
+                painter.setPen(ws_color)
+                mid_y = top + round(height / 2)
+                x = base_x
+                for ch in text:
+                    if ch == " ":
+                        painter.drawEllipse(
+                            x + round(cw / 2), mid_y, 2, 2
+                        )
+                    elif ch == "\t":
+                        tw = tab_size * cw
+                        painter.drawLine(x, mid_y, x + tw - 3, mid_y)
+                        painter.drawLine(x + tw - 3, mid_y, x + tw - 6, mid_y - 3)
+                        painter.drawLine(x + tw - 3, mid_y, x + tw - 6, mid_y + 3)
+                    x += (tab_size if ch == "\t" else 1) * cw
+                # End-of-line marker
+                eol_x = base_x + len(text) * cw
+                painter.drawLine(eol_x, top + 2, eol_x, top + height - 2)
+
+            block = block.next()
+
+        painter.end()
+
     # ── Signals ────────────────────────────────────────────────────
     def _on_text_changed(self):
         self.modified = True
@@ -156,6 +261,9 @@ class CodeEditor(QPlainTextEdit):
         c = self.app.colors
         painter.fillRect(event.rect(), QColor(c["bg_secondary"]))
 
+        cursor_block = self.textCursor().blockNumber()
+        accent = QColor(c.get("accent", "#89b4fa"))
+
         block = self.firstVisibleBlock()
         block_number = block.blockNumber()
         top = round(
@@ -166,8 +274,12 @@ class CodeEditor(QPlainTextEdit):
         while block.isValid() and top <= event.rect().bottom():
             if block.isVisible() and bottom >= event.rect().top():
                 number = str(block_number + 1)
-                painter.setPen(QColor(c["fg_secondary"]))
-                painter.setFont(self.font())
+                is_current = block_number == cursor_block
+                painter.setPen(accent if is_current else QColor(c["fg_secondary"]))
+                font = self.font()
+                if is_current:
+                    font.setBold(True)
+                painter.setFont(font)
                 painter.drawText(
                     0, top,
                     self.line_number_area.width() - 6,
@@ -843,6 +955,7 @@ class EditorTabWidget(QWidget):
             )
 
         idx = self.tabs.addTab(editor, title)
+        self.tabs.setTabIcon(idx, _tab_icon_for(filepath))
         self.tabs.setCurrentIndex(idx)
 
         self.editors[tab_id] = {
@@ -861,6 +974,7 @@ class EditorTabWidget(QWidget):
         tab_id = f"tab_{self.tab_counter}"
         preview = MarkdownPreview(self.app, html, title)
         idx = self.tabs.addTab(preview, title)
+        self.tabs.setTabIcon(idx, svg_icon("file_md", 14))
         self.tabs.setCurrentIndex(idx)
         self.editors[tab_id] = {"editor": preview, "filepath": None, "title": title}
         preview._tab_id = tab_id
@@ -977,10 +1091,11 @@ class EditorTabWidget(QWidget):
         menu.exec(self.tabs.tabBar().mapToGlobal(pos))
 
     def _copy_tab_path(self, index):
+        from PyQt6.QtWidgets import QApplication
         editor = self.tabs.widget(index)
         path = getattr(editor, "filepath", None)
         if path:
-            self.app.clipboard().setText(path)
+            QApplication.clipboard().setText(path)
             self.app.set_status(f"Copied: {path}")
 
     # ── Search / font / theme ──────────────────────────────────────

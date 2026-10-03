@@ -106,5 +106,51 @@ class TestIndent(unittest.TestCase):
         self.assertEqual(ca.outdent_lines("  x", 1, tab_size=4), "x")
 
 
+
+
+class TestCaseConversions(unittest.TestCase):
+
+    def test_upper(self):
+        from src.core import code_actions as ca
+        self.assertEqual(ca.to_upper("hello world"), "HELLO WORLD")
+
+    def test_lower(self):
+        from src.core import code_actions as ca
+        self.assertEqual(ca.to_lower("HELLO"), "hello")
+
+    def test_title(self):
+        from src.core import code_actions as ca
+        self.assertEqual(ca.to_title("hello world"), "Hello World")
+
+    def test_camel_from_spaces(self):
+        from src.core import code_actions as ca
+        self.assertEqual(ca.to_camel("my var name"), "myVarName")
+
+    def test_camel_from_snake(self):
+        from src.core import code_actions as ca
+        self.assertEqual(ca.to_camel("my_var_name"), "myVarName")
+
+    def test_pascal(self):
+        from src.core import code_actions as ca
+        self.assertEqual(ca.to_pascal("my var name"), "MyVarName")
+
+    def test_snake_from_camel(self):
+        from src.core import code_actions as ca
+        self.assertEqual(ca.to_snake("MyVarName"), "my_var_name")
+
+    def test_snake_from_spaces(self):
+        from src.core import code_actions as ca
+        self.assertEqual(ca.to_snake("hello world"), "hello_world")
+
+    def test_kebab(self):
+        from src.core import code_actions as ca
+        self.assertEqual(ca.to_kebab("hello world"), "hello-world")
+
+    def test_empty(self):
+        from src.core import code_actions as ca
+        self.assertEqual(ca.to_camel(""), "")
+        self.assertEqual(ca.to_snake("   "), "   ")
+
+
 if __name__ == "__main__":
     unittest.main()

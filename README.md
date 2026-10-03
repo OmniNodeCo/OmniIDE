@@ -45,17 +45,20 @@
 ### Editor
 - Multi-tab code editor (QPlainTextEdit)
 - Syntax highlighting (QSyntaxHighlighter) — Python, JS/TS, HTML, CSS, JSON, Markdown, YAML, Rust, Go
-- Line numbers with gutter
+- Line numbers with gutter, current line highlighted
 - Auto-indent, smart brackets (auto-close + empty-pair delete)
 - Bracket matching with highlight
 - Find & Replace with case / whole-word / regex options
 - Duplicate / delete / move / sort lines
 - Toggle comment (`Ctrl+/`) — 30+ languages
+- Convert Case — UPPER/lower/Title/camel/Pascal/snake/kebab
+- Format JSON, Revert File
 - Go to Line (`Ctrl+G`)
 - Markdown preview (`Ctrl+Shift+V`) — built-in converter
 - JSON validation with error marker on save
+- Whitespace view + indent guides (Settings)
 - Word wrap toggle, zoom in/out/reset
-- Current line highlight, drag & drop files
+- Per-language tab icons, drag & drop files
 - Tab context menu: close / close others / close all / copy path
 - Reorderable tabs (double-click closes)
 
@@ -66,7 +69,8 @@
 - **Quick Open** (`Ctrl+P`) — fuzzy file finder
 - **Search in Files** (`Ctrl+Shift+F`) — project-wide search panel with line numbers, case / whole-word / regex
 - Breadcrumbs bar (click to expand tree)
-- Command Palette (`Ctrl+Shift+P`) — 50+ fuzzy-ranked commands
+- **Run File** (`Ctrl+F5`) — Run menu, toolbar, palette; dedicated terminal tab
+- Command Palette (`Ctrl+Shift+P`) — 55+ fuzzy-ranked commands
 - Resizable panels (QSplitter)
 
 </td>
@@ -80,7 +84,7 @@
 - Auto-detects shells per OS
 - Shell selector dropdown
 - Per-session command history
-- Restart and clear
+- Restart, clear, and **Copy All** output
 
 </td>
 <td>
@@ -90,12 +94,15 @@
 - Show hidden files toggle, refresh
 - Auto save (interval + on tab switch)
 - Save All / Close All / Close Others
+- Recent Files & Recent Folders menus
+- Session restore — reopen last session's tabs on start
+- Status bar: line/word/size stats, cursor, selection, encoding, EOL, git branch
 - Line ending detection (LF/CRLF/CR) + convert
 - Minimap (bar-style document overview)
 - VS Code Marketplace browser, VSIX install
 - Git: clone, commit, push, pull, diff, log, branches
 - Dark & light Catppuccin themes
-- Auto-update checker (GitHub Releases)
+- Auto-update checker (GitHub Releases) with release-notes dialog
 
 </td>
 </tr>
@@ -142,6 +149,7 @@ python run.py
 | Move Line Up / Down | `Alt+Up` / `Alt+Down` |
 | Sort Lines | `Ctrl+Shift+O` |
 | Markdown Preview | `Ctrl+Shift+V` |
+| Run File | `Ctrl+F5` |
 | New Terminal | `Ctrl+Shift+T` |
 | Toggle Sidebar | `Ctrl+B` |
 | Toggle Terminal | `` Ctrl+` `` |
@@ -165,7 +173,14 @@ python -m unittest discover tests
 ## Changelog
 
 **v1.1.0 (Latest)**
-- Enhanced update flow — release-notes dialog, current → latest versions, "Release Notes" action even when up to date
+- Run File (Ctrl+F5) — Run menu + toolbar; runs Python/JS/Shell/Ruby/Go/TS and more in a dedicated terminal tab
+- Convert Case — UPPER/lower/Title/camel/Pascal/snake/kebab (selection or word)
+- Format JSON, Revert File
+- Recent Files / Recent Folders menus, session restore on start
+- Status bar document stats (lines/words/size), per-language tab icons
+- Whitespace view + indent guides (Settings), gutter current-line highlight
+- Terminal Copy All
+- Enhanced update flow — release-notes dialog, current → latest versions
 - Quick Open (`Ctrl+P`) with fuzzy file ranking
 - Search in Files panel (`Ctrl+Shift+F`) — case / whole-word / regex, open result at line
 - Line actions: duplicate, delete, move up/down, sort lines

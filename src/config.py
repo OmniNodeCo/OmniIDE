@@ -64,6 +64,9 @@ DEFAULT_SETTINGS = {
     "show_hidden_files": False,
     "max_search_results": 1000,
     "smart_brackets": True,
+    "indent_guides": True,
+    "restore_session": True,
+    "max_recent_folders": 10,
 }
 
 SUPPORTED_EXTENSIONS = {

@@ -37,6 +37,10 @@ class StatusBar(QWidget):
         self.filetype_label.setProperty("cssClass", "dim")
         layout.addWidget(self.filetype_label)
 
+        self.doc_stats_label = QLabel("")
+        self.doc_stats_label.setProperty("cssClass", "dim")
+        layout.addWidget(self.doc_stats_label)
+
         self.cursor_label = QLabel("Ln 1, Col 1")
         self.cursor_label.setProperty("cssClass", "dim")
         layout.addWidget(self.cursor_label)
@@ -95,3 +99,25 @@ class StatusBar(QWidget):
             self.selection_label.setText(f"{words} selected")
         else:
             self.selection_label.setText("")
+
+        self._update_doc_stats(widget)
+
+    def _update_doc_stats(self, widget):
+        to_plain = getattr(widget, "toPlainText", None)
+        if not callable(to_plain):
+            self.doc_stats_label.setText("")
+            return
+        text = to_plain()
+        lines = widget.document().blockCount()
+        words = len(text.split())
+        size = len(text.encode("utf-8"))
+        self.doc_stats_label.setText(
+            f"{lines} lines, {words} words, {self._human(size)}"
+        )
+
+    @staticmethod
+    def _human(n):
+        for unit in ("B", "KB", "MB", "GB"):
+            if n < 1024 or unit == "GB":
+                return f"{n} {unit}" if unit == "B" else f"{n:.1f} {unit}"
+            n /= 1024.0

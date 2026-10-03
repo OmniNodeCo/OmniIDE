@@ -8,7 +8,7 @@ from PyQt6.QtWidgets import (
     QHBoxLayout, QFileDialog, QMessageBox, QApplication,
 )
 from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QFont, QFontDatabase, QIcon, QShortcut, QKeySequence
+from PyQt6.QtGui import QFont, QFontDatabase, QIcon, QShortcut, QKeySequence, QTextCursor
 
 from src.config import (
     APP_NAME, APP_VERSION, APP_AUTHOR,
@@ -21,6 +21,7 @@ from src.core.git_manager import GitManager
 from src.core.git_installer import GitInstaller
 from src.core.extension_manager import ExtensionManager
 from src.core.updater import Updater
+from src.utils.recent_folders import RecentFolders
 from src.ui.editor_widget import EditorTabWidget, BreadcrumbBar
 from src.ui.minimap import Minimap
 from src.ui.sidebar import Sidebar
@@ -64,6 +65,7 @@ class OmniIDEApp(QMainWindow):
         self.git_installer = GitInstaller(self)
         self.extension_manager = ExtensionManager(self)
         self.updater = Updater(self)
+        self.recent_folders = RecentFolders()
 
         self.splash.set_progress(35)
         self.splash.set_status("Building interface...")
@@ -102,9 +104,45 @@ class OmniIDEApp(QMainWindow):
 
     def _finish_startup(self):
         self.splash.close()
-        self.editor_tabs.add_welcome_tab()
+        restored = self._restore_session()
+        if not restored:
+            self.editor_tabs.add_welcome_tab()
         self.git_installer.check_and_prompt()
         self.updater.check_on_startup()
+
+    def _restore_session(self):
+        """Reopen files from the last session. Returns True if anything opened."""
+        if not self.settings.get("restore_session", True):
+            return False
+        from src.core.session import load_session
+        files, active = load_session()
+        if not files:
+            return False
+        for i, path in enumerate(files):
+            if not os.path.isfile(path):
+                continue
+            self.file_manager.open_file(path)
+        # Focus the active tab
+        for i in range(self.editor_tabs.tabs.count()):
+            widget = self.editor_tabs.tabs.widget(i)
+            fp = getattr(widget, "filepath", None)
+            if fp and i == active and os.path.abspath(fp) in files:
+                self.editor_tabs.tabs.setCurrentIndex(i)
+                break
+        self.set_status(f"Restored session ({len(files)} files)")
+        return True
+
+    def _save_session(self):
+        from src.core.session import save_session
+        if not self.settings.get("restore_session", True):
+            return
+        files = []
+        for widget in self.editor_tabs.all_editors():
+            fp = getattr(widget, "filepath", None)
+            if fp and os.path.isfile(fp):
+                files.append(os.path.abspath(fp))
+        active = self.editor_tabs.tabs.currentIndex()
+        save_session(files, active)
 
     def _load_settings(self):
         if os.path.exists(SETTINGS_PATH):
@@ -243,6 +281,7 @@ class OmniIDEApp(QMainWindow):
             "Alt+Down": self.move_line_down,
             "Ctrl+Shift+O": self.sort_lines,
             "Ctrl+Shift+V": self.toggle_markdown_preview,
+            "Ctrl+F5": self.run_current_file,
             "Ctrl+=": lambda: self._zoom(1),
             "Ctrl+-": lambda: self._zoom(-1),
             "Ctrl+0": lambda: self._zoom(0),
@@ -395,10 +434,14 @@ class OmniIDEApp(QMainWindow):
             path = QFileDialog.getExistingDirectory(self, "Open Project Folder")
         if path and os.path.isdir(path):
             self.current_project_path = path
+            self.recent_folders.add(path)
             self.sidebar.file_tree.load_directory(path)
             self.setWindowTitle(f"{APP_NAME} — {os.path.basename(path)} — {APP_AUTHOR}")
             self.set_status(f"Project: {path}")
             self.git_manager.detect_repo(path)
+
+    def open_recent_folder(self, path):
+        self.open_project(path)
 
     def toggle_minimap(self):
         self.settings["minimap_enabled"] = not self.settings.get("minimap_enabled", False)
@@ -420,6 +463,115 @@ class OmniIDEApp(QMainWindow):
     def show_release_notes(self):
         self.updater.show_release_notes()
 
+    # ── Run file ─────────────────────────────────────────────────
+    def run_current_file(self):
+        from src.core.runner import build_run_command
+        editor = self.editor_tabs.get_current_code_editor()
+        path = getattr(editor, "filepath", None) if editor else None
+        if not path:
+            self.set_status("Open a file to run it")
+            return
+        cmd, cwd = build_run_command(path)
+        if cmd is None:
+            self.set_status(f"No runner for {os.path.splitext(path)[1]}")
+            return
+        inst = self.terminal.new_terminal()
+        self._set_terminal_title(inst, f"Run: {os.path.basename(path)}")
+        if cwd:
+            try:
+                if inst.process:
+                    inst.process.setWorkingDirectory(cwd)
+            except Exception:
+                pass
+        inst.run_command(" ".join(cmd))
+        self.set_status(f"Running: {os.path.basename(path)}")
+
+    def _set_terminal_title(self, inst, title):
+        for i in range(self.terminal.tabs.count()):
+            if self.terminal.tabs.widget(i) is inst:
+                self.terminal.tabs.setTabText(i, title)
+                break
+
+    # ── Revert / format / case ───────────────────────────────────
+    def revert_file(self):
+        from PyQt6.QtWidgets import QMessageBox
+        from src.core.textfile import read_text
+        editor = self.editor_tabs.get_current_code_editor()
+        path = getattr(editor, "filepath", None) if editor else None
+        if not path or not os.path.isfile(path):
+            self.set_status("No file open to revert")
+            return
+        if getattr(editor, "modified", False):
+            result = QMessageBox.question(
+                self, "Revert File",
+                "Discard unsaved changes and reload from disk?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            )
+            if result != QMessageBox.StandardButton.Yes:
+                return
+        try:
+            text, encoding, eol, _bom = read_text(path)
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Cannot read:\n{e}")
+            return
+        editor.set_content(text)
+        self.file_manager._update_file_status(path, encoding, eol)
+        self.editor_tabs.mark_saved(editor)
+        self.set_status(f"Reverted: {os.path.basename(path)}")
+
+    def format_json(self):
+        import json as _json
+        editor = self.editor_tabs.get_current_code_editor()
+        if not editor:
+            return
+        text = editor.get_content()
+        try:
+            data = _json.loads(text)
+        except Exception as e:
+            self.set_status(f"Cannot format: {e}")
+            return
+        editor.set_content(_json.dumps(data, indent=4, ensure_ascii=False) + "\n")
+        self.set_status("JSON formatted")
+
+    def convert_case(self, mode):
+        editor = self.editor_tabs.get_current_code_editor()
+        if not editor:
+            return
+        cursor = editor.textCursor()
+        if cursor.hasSelection():
+            start, end = cursor.selectionStart(), cursor.selectionEnd()
+            original = editor.get_content()
+            selected = original[start:end]
+        else:
+            # Fall back to the word under the cursor
+            cursor.select(QTextCursor.SelectionType.WordUnderCursor)
+            start, end = cursor.selectionStart(), cursor.selectionEnd()
+            original = editor.get_content()
+            selected = original[start:end]
+        if not selected:
+            return
+        from src.core import code_actions
+        fn = {
+            "upper": code_actions.to_upper,
+            "lower": code_actions.to_lower,
+            "title": code_actions.to_title,
+            "camel": code_actions.to_camel,
+            "pascal": code_actions.to_pascal,
+            "snake": code_actions.to_snake,
+            "kebab": code_actions.to_kebab,
+        }.get(mode)
+        if fn is None:
+            return
+        new_text = fn(selected)
+        replaced = original[:start] + new_text + original[end:]
+        editor.set_content(replaced)
+        # Keep the converted range selected for quick follow-ups
+        c = editor.textCursor()
+        c.setPosition(start)
+        c.setPosition(start + len(new_text), QTextCursor.MoveMode.KeepAnchor)
+        editor.setTextCursor(c)
+        self.set_status(f"Case: {mode}")
+
     def _zoom(self, direction):
         if direction == 0:
             self.settings["font_size"] = 13
@@ -433,6 +585,7 @@ class OmniIDEApp(QMainWindow):
         self.set_status(f"Font size: {self.settings['font_size']}")
 
     def closeEvent(self, event):
+        self._save_session()
         self.terminal.stop_shell()
         self.save_settings()
         event.accept()

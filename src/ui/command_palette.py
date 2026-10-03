@@ -79,6 +79,7 @@ class CommandPaletteDialog(QDialog):
             ("File: Save", "Ctrl+S", app.file_manager.save_file),
             ("File: Save As", "Ctrl+Shift+S", app.file_manager.save_file_as),
             ("File: Save All", "Ctrl+Alt+S", app.file_manager.save_all),
+            ("File: Revert File", "", app.revert_file),
             ("File: Close Tab", "Ctrl+W", et.close_current_tab),
             ("File: Close Other Tabs", "", et.close_other_tabs),
             ("File: Close All Tabs", "", et.close_all_tabs),
@@ -90,8 +91,17 @@ class CommandPaletteDialog(QDialog):
             ("Edit: Move Line Up", "Alt+Up", app.move_line_up),
             ("Edit: Move Line Down", "Alt+Down", app.move_line_down),
             ("Edit: Sort Lines", "Ctrl+Shift+O", app.sort_lines),
+            ("Edit: Format JSON", "", app.format_json),
+            ("Edit: Convert Case: UPPERCASE", "", lambda: app.convert_case("upper")),
+            ("Edit: Convert Case: lowercase", "", lambda: app.convert_case("lower")),
+            ("Edit: Convert Case: Title Case", "", lambda: app.convert_case("title")),
+            ("Edit: Convert Case: camelCase", "", lambda: app.convert_case("camel")),
+            ("Edit: Convert Case: PascalCase", "", lambda: app.convert_case("pascal")),
+            ("Edit: Convert Case: snake_case", "", lambda: app.convert_case("snake")),
+            ("Edit: Convert Case: kebab-case", "", lambda: app.convert_case("kebab")),
             ("Edit: Line Endings: LF", "", lambda: app.file_manager.convert_line_endings("lf")),
             ("Edit: Line Endings: CRLF", "", lambda: app.file_manager.convert_line_endings("crlf")),
+            ("Run: Run File", "Ctrl+F5", app.run_current_file),
             ("View: Command Palette", "Ctrl+Shift+P", lambda: None),
             ("View: Search in Files", "Ctrl+Shift+F", app.open_search),
             ("View: Toggle Sidebar", "Ctrl+B", app.toggle_sidebar),
@@ -117,6 +127,7 @@ class CommandPaletteDialog(QDialog):
             ("Git: Pull", "", app.git_manager.git_pull),
             ("Git: Set Remote", "", app.git_manager.add_remote),
             ("Terminal: Clear", "", lambda: app.terminal.clear()),
+            ("Terminal: Copy All", "", app.terminal.copy_all),
             ("Terminal: New Terminal", "Ctrl+Shift+T", app.new_terminal),
             ("Terminal: Restart", "", lambda: app.terminal._restart()),
             ("Update: Check for Updates", "", app.check_for_updates),
@@ -149,7 +160,7 @@ class CommandPaletteDialog(QDialog):
                 scored.append((s, label, shortcut, action))
 
         scored.sort(key=lambda t: (-t[0], t[1].lower()))
-        for _s, label, shortcut, action in scored[:40]:
+        for _s, label, shortcut, action in scored[:200]:
             text = f"{label}    {shortcut}" if shortcut else label
             item = QListWidgetItem(text)
             item.setData(Qt.ItemDataRole.UserRole, action)

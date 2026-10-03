@@ -205,3 +205,58 @@ def outdent_lines(text, line_no, tab_size=4, tabs=False):
                 n += 1
             lines[line_no - 1] = line[n:]
     return "\n".join(lines)
+
+
+# ── Case conversions (operate on a selection or word) ──────────────
+def _split_words(text):
+    import re
+    parts = re.split(r"[\s_\-]+", text.strip())
+    out = []
+    for p in parts:
+        # split camelCase boundaries: "camelCase" -> ["camel", "Case"]
+        for m in re.finditer(r"[A-Z]?[a-z]+|[A-Z]+(?![a-z])|[A-Z]?", p):
+            w = m.group(0)
+            if w:
+                out.append(w)
+    return [w for w in out if w]
+
+
+def to_upper(text):
+    return text.upper()
+
+
+def to_lower(text):
+    return text.lower()
+
+
+def to_title(text):
+    return text.title()
+
+
+def to_camel(text):
+    words = _split_words(text)
+    if not words:
+        return text
+    first, rest = words[0], words[1:]
+    return first.lower() + "".join(w[:1].upper() + w[1:].lower() for w in rest)
+
+
+def to_pascal(text):
+    words = _split_words(text)
+    if not words:
+        return text
+    return "".join(w[:1].upper() + w[1:].lower() for w in words)
+
+
+def to_snake(text):
+    words = _split_words(text)
+    if not words:
+        return text
+    return "_".join(w.lower() for w in words)
+
+
+def to_kebab(text):
+    words = _split_words(text)
+    if not words:
+        return text
+    return "-".join(w.lower() for w in words)

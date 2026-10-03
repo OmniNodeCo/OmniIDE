@@ -20,19 +20,28 @@ class MenuBarBuilder:
         self._add(file_menu, "Save", "Ctrl+S", app.file_manager.save_file)
         self._add(file_menu, "Save As", "Ctrl+Shift+S", app.file_manager.save_file_as)
         self._add(file_menu, "Save All", "Ctrl+Alt+S", app.file_manager.save_all)
+        self._add(file_menu, "Revert File", "", app.revert_file)
         file_menu.addSeparator()
         self._add(file_menu, "Close Tab", "Ctrl+W", app.editor_tabs.close_current_tab)
         self._add(file_menu, "Close Other Tabs", "", app.editor_tabs.close_other_tabs)
         self._add(file_menu, "Close All Tabs", "", app.editor_tabs.close_all_tabs)
         file_menu.addSeparator()
+        self._build_recent_menus(file_menu, app)
+        file_menu.addSeparator()
         self._add(file_menu, "Settings", "Ctrl+,", lambda: app.open_settings())
         file_menu.addSeparator()
         self._add(file_menu, "Exit", "", app.close)
+
+        # Run
+        run_menu = menubar.addMenu("Run")
+        self._add(run_menu, "Run File", "Ctrl+F5", app.run_current_file)
 
         # Edit
         edit_menu = menubar.addMenu("Edit")
         self._add(edit_menu, "Find & Replace", "Ctrl+F", app.toggle_search)
         self._add(edit_menu, "Go to Line", "Ctrl+G", app.go_to_line)
+        self._add(edit_menu, "Format JSON", "", app.format_json)
+        self._build_case_menu(edit_menu, app)
         edit_menu.addSeparator()
         self._add(edit_menu, "Toggle Comment", "Ctrl+/", app.toggle_comment)
         self._add(edit_menu, "Duplicate Line", "Ctrl+D", app.duplicate_line)
@@ -94,6 +103,66 @@ class MenuBarBuilder:
         self._add(help_menu, "Check for Updates", "", app.check_for_updates)
         self._add(help_menu, "Release Notes", "", app.show_release_notes)
         self._add(help_menu, "About", "", self._about)
+
+    def _build_recent_menus(self, menu, app):
+        # Recent Files
+        recent_files_menu = menu.addMenu("Open Recent File")
+        files = app.recent_files_manager.get_all()
+        if files:
+            for fp in files:
+                act = QAction(fp, self.app)
+                act.triggered.connect(lambda _=False, p=fp: app.file_manager.open_file(p))
+                recent_files_menu.addAction(act)
+            recent_files_menu.addSeparator()
+            clear_act = QAction("Clear Recent Files", self.app)
+            clear_act.triggered.connect(lambda: (
+                app.recent_files_manager.clear(), self._rebuild_menubar(app)
+            ))
+            recent_files_menu.addAction(clear_act)
+        else:
+            act = QAction("(no recent files)", self.app)
+            act.setEnabled(False)
+            recent_files_menu.addAction(act)
+
+        # Recent Folders
+        recent_folders_menu = menu.addMenu("Open Recent Folder")
+        folders = app.recent_folders.get_all()
+        if folders:
+            for fp in folders:
+                act = QAction(fp, self.app)
+                act.triggered.connect(lambda _=False, p=fp: app.open_recent_folder(p))
+                recent_folders_menu.addAction(act)
+            recent_folders_menu.addSeparator()
+            clear_act = QAction("Clear Recent Folders", self.app)
+            clear_act.triggered.connect(lambda: (
+                app.recent_folders.clear(), self._rebuild_menubar(app)
+            ))
+            recent_folders_menu.addAction(clear_act)
+        else:
+            act = QAction("(no recent folders)", self.app)
+            act.setEnabled(False)
+            recent_folders_menu.addAction(act)
+
+    def _rebuild_menubar(self, app):
+        from PyQt6.QtWidgets import QMenuBar
+        old = app.menuBar()
+        app.setMenuBar(None)
+        old.deleteLater()
+        MenuBarBuilder(app)
+
+    def _build_case_menu(self, menu, app):
+        case_menu = menu.addMenu("Convert Case")
+        options = [
+            ("UPPERCASE", "upper"),
+            ("lowercase", "lower"),
+            ("Title Case", "title"),
+            ("camelCase", "camel"),
+            ("PascalCase", "pascal"),
+            ("snake_case", "snake"),
+            ("kebab-case", "kebab"),
+        ]
+        for label, mode in options:
+            self._add(case_menu, label, "", lambda _=False, m=mode: app.convert_case(m))
 
     def _add(self, menu, text, shortcut, callback):
         action = QAction(text, self.app)

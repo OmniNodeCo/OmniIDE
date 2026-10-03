@@ -5,6 +5,18 @@ All notable changes to OmniIDE are documented here.
 ## [1.1.0] — 2026-08-23
 
 ### Added
+- **Run File** (`Ctrl+F5`) — Run menu, toolbar play button, and palette; detects Python/JS/Shell/Ruby/Perl/PHP/Lua/PowerShell/Go/TS and runs in a dedicated terminal tab
+- **Convert Case** — UPPERCASE, lowercase, Title, camelCase, PascalCase, snake_case, kebab-case (Edit menu + palette); works on selection or current word
+- **Format JSON** — pretty-prints the open JSON file (Edit menu + palette)
+- **Revert File** — reload from disk, discarding unsaved changes (with confirmation)
+- **Recent Files / Recent Folders** menus in File, with clear actions
+- **Session restore** — open tabs are reopened on next launch (Settings → Session → Restore Open Files on Start)
+- **Status bar document stats** — line count, word count, file size, plus live selection info
+- **Tab icons** — per-language file icons on editor tabs
+- **Gutter polish** — current line number highlighted in accent color
+- **Whitespace view** — dots for spaces, arrows for tabs, end-of-line markers (Settings → Show Whitespace)
+- **Indent guides** — subtle vertical guides at each indent level (toggle in Settings)
+- **Terminal: Copy All** — copy the entire terminal output to clipboard
 - **Enhanced update flow** — update dialog shows current → latest version, full release notes, download link; "Release Notes" available from Tools/Help even when up to date
 - **Quick Open** (`Ctrl+P`) — fuzzy file finder for the current project with a cached, pruned index
 - **Search in Files** (`Ctrl+Shift+F`) — dedicated sidebar panel: project-wide search with line numbers, match counts, case / whole-word / regex options, double-click to open at line

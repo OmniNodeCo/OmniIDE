@@ -89,8 +89,13 @@ class SettingsDialog(QDialog):
         self._check("Auto Indent", "auto_indent", s.get("auto_indent", True))
         self._check("Line Numbers", "show_line_numbers", s.get("show_line_numbers", True))
         self._check("Smart Brackets", "smart_brackets", s.get("smart_brackets", True))
+        self._check("Show Whitespace", "show_whitespace", s.get("show_whitespace", False))
+        self._check("Indent Guides", "indent_guides", s.get("indent_guides", True))
         self._check("Auto Save", "auto_save", s.get("auto_save", False))
         self._spin("Auto Save Interval (s)", "auto_save_interval", s.get("auto_save_interval", 30), 5, 600)
+
+        self._section("Session")
+        self._check("Restore Open Files on Start", "restore_session", s.get("restore_session", True))
 
         self._section("Files")
         self._check("Show Hidden Files", "show_hidden_files", s.get("show_hidden_files", False))
@@ -200,6 +205,13 @@ class SettingsDialog(QDialog):
             self.app._autosave_timer.setInterval(max(5, int(value)) * 1000)
         elif key == "tab_size":
             self.app.editor_tabs.apply_font()
+        elif key in ("show_whitespace", "indent_guides"):
+            self.app.editor_tabs.refresh_all()
+            for i in range(self.app.editor_tabs.tabs.count()):
+                editor = self.app.editor_tabs.tabs.widget(i)
+                viewport = getattr(editor, "viewport", None)
+                if callable(viewport):
+                    viewport().update()
 
         self.app.save_settings()
 

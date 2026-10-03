@@ -254,7 +254,8 @@ class FileManager:
             QMessageBox.critical(self.app, "Delete", f"Cannot delete:\n{e}")
 
     def copy_path_to_clipboard(self, path):
-        clip = self.app.clipboard()
+        from PyQt6.QtWidgets import QApplication
+        clip = QApplication.clipboard()
         if clip:
             clip.setText(path)
             self.app.set_status(f"Copied: {path}")

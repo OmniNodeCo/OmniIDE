@@ -53,6 +53,26 @@ SVGS = {
     "uninstall": """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><line x1="4" y1="4" x2="12" y2="12" stroke="#f38ba8" stroke-width="1.5" stroke-linecap="round"/><line x1="12" y1="4" x2="4" y2="12" stroke="#f38ba8" stroke-width="1.5" stroke-linecap="round"/></svg>""",
 
     "refresh": """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M13.5 8A5.5 5.5 0 1 1 8 2.5" fill="none" stroke="#89b4fa" stroke-width="1.5" stroke-linecap="round"/><polyline points="10,2.5 8,2.5 8,5" fill="none" stroke="#89b4fa" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>""",
+
+    "play": """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><polygon points="4,2.5 13,8 4,13.5" fill="#a6e3a1"/></svg>""",
+
+    "file_generic": """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M3.5 1.5h6l3 3v10h-9v-13z" fill="#313244" stroke="#89b4fa" stroke-width="1" stroke-linejoin="round"/><path d="M9.5 1.5v3h3" fill="none" stroke="#89b4fa" stroke-width="1"/></svg>""",
+
+    "file_py": """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M3.5 1.5h6l3 3v10h-9v-13z" fill="#313244" stroke="#f9e2af" stroke-width="1" stroke-linejoin="round"/><text x="8" y="11.5" font-family="monospace" font-size="6.5" font-weight="bold" fill="#f9e2af" text-anchor="middle">PY</text></svg>""",
+
+    "file_js": """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M3.5 1.5h6l3 3v10h-9v-13z" fill="#313244" stroke="#f9e2af" stroke-width="1" stroke-linejoin="round"/><text x="8" y="11.5" font-family="monospace" font-size="6.5" font-weight="bold" fill="#f9e2af" text-anchor="middle">JS</text></svg>""",
+
+    "file_ts": """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M3.5 1.5h6l3 3v10h-9v-13z" fill="#313244" stroke="#89b4fa" stroke-width="1" stroke-linejoin="round"/><text x="8" y="11.5" font-family="monospace" font-size="6.5" font-weight="bold" fill="#89b4fa" text-anchor="middle">TS</text></svg>""",
+
+    "file_html": """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M3.5 1.5h6l3 3v10h-9v-13z" fill="#313244" stroke="#f38ba8" stroke-width="1" stroke-linejoin="round"/><text x="8" y="11.5" font-family="monospace" font-size="5.5" font-weight="bold" fill="#f38ba8" text-anchor="middle">HTML</text></svg>""",
+
+    "file_css": """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M3.5 1.5h6l3 3v10h-9v-13z" fill="#313244" stroke="#cba6f7" stroke-width="1" stroke-linejoin="round"/><text x="8" y="11.5" font-family="monospace" font-size="5.5" font-weight="bold" fill="#cba6f7" text-anchor="middle">CSS</text></svg>""",
+
+    "file_json": """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M3.5 1.5h6l3 3v10h-9v-13z" fill="#313244" stroke="#fab387" stroke-width="1" stroke-linejoin="round"/><text x="8" y="11.5" font-family="monospace" font-size="5" font-weight="bold" fill="#fab387" text-anchor="middle">{}</text></svg>""",
+
+    "file_md": """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M3.5 1.5h6l3 3v10h-9v-13z" fill="#313244" stroke="#94e2d5" stroke-width="1" stroke-linejoin="round"/><text x="8" y="11.5" font-family="monospace" font-size="5.5" font-weight="bold" fill="#94e2d5" text-anchor="middle">MD</text></svg>""",
+
+    "file_sh": """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M3.5 1.5h6l3 3v10h-9v-13z" fill="#313244" stroke="#a6e3a1" stroke-width="1" stroke-linejoin="round"/><text x="8" y="11.5" font-family="monospace" font-size="5.5" font-weight="bold" fill="#a6e3a1" text-anchor="middle">SH</text></svg>""",
 }
 
 

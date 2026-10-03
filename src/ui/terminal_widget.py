@@ -44,6 +44,7 @@ class TerminalInstance(QWidget):
         self.process = None
         self.history = []
         self.history_idx = -1
+        self._pending_command = None
 
         c = app.colors
         font = QFont(app.settings["font_family"], max(9, app.settings["font_size"] - 1))
@@ -103,7 +104,26 @@ class TerminalInstance(QWidget):
             return self.shells[idx]
         return self.shells[0]
 
+    def run_command(self, command):
+        """Send a command to this shell (used by 'Run File').
+
+        If the shell has not started yet, the command is queued and sent
+        as soon as it does (``started`` is wired up in _start_shell).
+        """
+        self._pending_command = command
+        if self.process and self.process.state() == QProcess.ProcessState.Running:
+            self._flush_pending()
+
+    def _flush_pending(self):
+        if self._pending_command is None:
+            return
+        cmd, self._pending_command = self._pending_command, None
+        self._write(f">> {cmd}\n")
+        if self.process and self.process.state() == QProcess.ProcessState.Running:
+            self.process.write((cmd + "\n").encode())
+
     def _start_shell(self):
+        self._pending_command = None
         self.stop_shell()
 
         name, cmd = self.current_shell()
@@ -115,6 +135,7 @@ class TerminalInstance(QWidget):
         self.process.setProcessChannelMode(QProcess.ProcessChannelMode.MergedChannels)
         self.process.readyReadStandardOutput.connect(self._read_output)
         self.process.finished.connect(self._on_finished)
+        self.process.started.connect(self._flush_pending)
 
         env = QProcessEnvironment.systemEnvironment()
         env.insert("TERM", "dumb")
@@ -214,6 +235,11 @@ class TerminalWidget(QWidget):
         new_btn.clicked.connect(self.new_terminal)
         header.addWidget(new_btn)
 
+        copy_btn = QPushButton("Copy All")
+        copy_btn.setToolTip("Copy all output to clipboard")
+        copy_btn.clicked.connect(self.copy_all)
+        header.addWidget(copy_btn)
+
         clear_btn = QPushButton("Clear")
         clear_btn.clicked.connect(self.clear)
         header.addWidget(clear_btn)
@@ -275,6 +301,13 @@ class TerminalWidget(QWidget):
         inst = self.current()
         if inst:
             inst.clear()
+
+    def copy_all(self):
+        inst = self.current()
+        if inst:
+            from PyQt6.QtWidgets import QApplication
+            QApplication.clipboard().setText(inst.output.toPlainText())
+            self.app.set_status("Terminal output copied")
 
     def _restart(self):
         inst = self.current()
