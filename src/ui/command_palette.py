@@ -119,7 +119,9 @@ class CommandPaletteDialog(QDialog):
             ("Terminal: Clear", "", lambda: app.terminal.clear()),
             ("Terminal: New Terminal", "Ctrl+Shift+T", app.new_terminal),
             ("Terminal: Restart", "", lambda: app.terminal._restart()),
+            ("Tools: Clone VS Code Source", "", app.clone_vscode_source),
             ("Update: Check for Updates", "", app.check_for_updates),
+            ("Update: Release Notes", "", app.show_release_notes),
             ("OmniIDE: About", "", self._about),
         ]
 

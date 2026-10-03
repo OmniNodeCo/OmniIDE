@@ -226,6 +226,11 @@ class GitPanel(QWidget):
         remote_btn.clicked.connect(gm.add_remote)
         layout.addWidget(remote_btn)
 
+        vscode_btn = _icon_btn("VS Code Source", "install")
+        vscode_btn.setToolTip("Clone the VS Code base source (shallow)")
+        vscode_btn.clicked.connect(app.clone_vscode_source)
+        layout.addWidget(vscode_btn)
+
         layout.addWidget(_sep())
         layout.addWidget(_section_label("Changes"))
 

@@ -21,6 +21,7 @@ from src.core.git_manager import GitManager
 from src.core.git_installer import GitInstaller
 from src.core.extension_manager import ExtensionManager
 from src.core.updater import Updater
+from src.core.source_cloner import SourceCloner
 from src.ui.editor_widget import EditorTabWidget, BreadcrumbBar
 from src.ui.minimap import Minimap
 from src.ui.sidebar import Sidebar
@@ -64,6 +65,9 @@ class OmniIDEApp(QMainWindow):
         self.git_installer = GitInstaller(self)
         self.extension_manager = ExtensionManager(self)
         self.updater = Updater(self)
+        self.source_cloner = SourceCloner(git_path=self.git_manager.git_path)
+        self.source_cloner.signals.status.connect(self.set_status)
+        self.source_cloner.signals.finished.connect(self._on_source_clone_done)
 
         self.splash.set_progress(35)
         self.splash.set_status("Building interface...")
@@ -416,6 +420,42 @@ class OmniIDEApp(QMainWindow):
 
     def check_for_updates(self):
         self.updater.check_now(silent=False)
+
+    def show_release_notes(self):
+        self.updater.show_release_notes()
+
+    def clone_vscode_source(self):
+        """Clone the VS Code base source tree into a folder of the user's choice."""
+        if not self.source_cloner.has_git():
+            QMessageBox.warning(self, "Git Required",
+                                "Git is required to clone source code.")
+            return
+
+        base = QFileDialog.getExistingDirectory(
+            self, "Choose a folder for the VS Code base source")
+        if not base:
+            return
+
+        if not self.source_cloner.start("vscode", base, depth=1):
+            return
+        self.set_status("Cloning VS Code base source... this may take a while.")
+
+    def _on_source_clone_done(self, ok, message):
+        if not ok:
+            self.set_status("VS Code source clone failed")
+            QMessageBox.warning(self, "Clone Failed",
+                                f"Could not clone the VS Code base source:\n\n{message}")
+            return
+
+        self.set_status("VS Code base source ready")
+        repo_path = message.split(" (")[0]
+        reply = QMessageBox.question(
+            self, "VS Code Base Source Ready",
+            f"Cloned to:\n{message}\n\nOpen it in OmniIDE?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+        if reply == QMessageBox.StandardButton.Yes:
+            self.open_project(repo_path)
 
     def _zoom(self, direction):
         if direction == 0:

@@ -165,6 +165,8 @@ python -m unittest discover tests
 ## Changelog
 
 **v1.1.0 (Latest)**
+- Clone VS Code Base Source (Tools menu / Git panel / Command Palette) — shallow clone of microsoft/vscode with progress and folder-size report
+- Enhanced update flow — release-notes dialog, current → latest versions, "Release Notes" action even when up to date
 - Quick Open (`Ctrl+P`) with fuzzy file ranking
 - Search in Files panel (`Ctrl+Shift+F`) — case / whole-word / regex, open result at line
 - Line actions: duplicate, delete, move up/down, sort lines

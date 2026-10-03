@@ -84,9 +84,17 @@ class MenuBarBuilder:
         git_menu.addSeparator()
         self._add(git_menu, "Set Remote", "", gm.add_remote)
 
+        # Tools
+        tools_menu = menubar.addMenu("Tools")
+        self._add(tools_menu, "Clone VS Code Source", "", app.clone_vscode_source)
+        tools_menu.addSeparator()
+        self._add(tools_menu, "Check for Updates", "", app.check_for_updates)
+        self._add(tools_menu, "Release Notes", "", app.show_release_notes)
+
         # Help
         help_menu = menubar.addMenu("Help")
         self._add(help_menu, "Check for Updates", "", app.check_for_updates)
+        self._add(help_menu, "Release Notes", "", app.show_release_notes)
         self._add(help_menu, "About", "", self._about)
 
     def _add(self, menu, text, shortcut, callback):

@@ -5,6 +5,8 @@ All notable changes to OmniIDE are documented here.
 ## [1.1.0] — 2026-08-23
 
 ### Added
+- **Clone VS Code Base Source** — Tools menu / Git panel / Command Palette: shallow-clone `microsoft/vscode` into any folder with progress, folder-size report, and "open in OmniIDE"
+- **Enhanced update flow** — update dialog shows current → latest version, full release notes, download link; "Release Notes" available from Tools/Help even when up to date
 - **Quick Open** (`Ctrl+P`) — fuzzy file finder for the current project with a cached, pruned index
 - **Search in Files** (`Ctrl+Shift+F`) — dedicated sidebar panel: project-wide search with line numbers, match counts, case / whole-word / regex options, double-click to open at line
 - **Line actions** — Duplicate (`Ctrl+D`), Delete (`Ctrl+Shift+D`), Move Up/Down (`Alt+Up` / `Alt+Down`), Sort Lines (`Ctrl+Shift+O`)
