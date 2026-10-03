@@ -14,7 +14,7 @@ permissions:
 
 env:
   QT_QPA_PLATFORM: offscreen
-  APP_VERSION_CHECK: "1.0.7"
+  APP_VERSION_CHECK: "1.1.0"
   QT_DEPS: >-
     libgl1 libglu1-mesa libegl1 libxkbcommon0
     libdbus-1-3 libxcb-cursor0 libxcb-xinerama0
@@ -39,13 +39,14 @@ jobs:
             "src/core/__init__.py" "src/core/file_manager.py" "src/core/git_manager.py"
             "src/core/git_installer.py" "src/core/extension_manager.py" "src/core/updater.py"
             "src/core/syntax_highlighter.py" "src/core/tab_manager.py" "src/core/terminal.py"
-            "src/core/search.py" "src/core/command_palette.py"
+            "src/core/search.py" "src/core/command_palette.py" "src/core/fuzzy.py" "src/core/quick_open.py"
+            "src/core/project_search.py" "src/core/code_actions.py" "src/core/markdown.py" "src/core/textfile.py"
             "src/ui/__init__.py" "src/ui/editor_widget.py" "src/ui/sidebar.py"
             "src/ui/terminal_widget.py" "src/ui/toolbar.py" "src/ui/statusbar.py"
             "src/ui/menubar.py" "src/ui/command_palette.py" "src/ui/settings_dialog.py"
             "src/ui/splash.py" "src/ui/theme_stylesheet.py" "src/ui/icons.py"
             "src/ui/file_tree.py" "src/ui/welcome.py"
-            "src/ui/extensions_panel.py" "src/ui/settings_panel.py"
+            "src/ui/extensions_panel.py" "src/ui/settings_panel.py" "src/ui/quick_open.py" "src/ui/search_panel.py" "src/ui/minimap.py"
             "src/utils/__init__.py" "src/utils/theme_loader.py" "src/utils/recent_files.py"
             "src/utils/shortcuts.py" "src/utils/styles.py" "src/utils/icon_manager.py"
             "docs/index.html" "docs/style.css" "docs/script.js" "docs/favicon.svg"
@@ -156,6 +157,9 @@ jobs:
               assert k in DEFAULT_SETTINGS
           print(f'{len(DEFAULT_SETTINGS)} keys — OK')
           "
+      - name: Unit Tests (new modules)
+        run: |
+          python -m unittest tests.test_fuzzy tests.test_code_actions tests.test_project_search tests.test_markdown tests.test_quick_open tests.test_textfile -v
       - name: Stylesheet
         run: python -c "from src.utils.theme_loader import ThemeLoader; from src.ui.theme_stylesheet import build_stylesheet; css=build_stylesheet(ThemeLoader('dark').colors); assert 'QMainWindow' in css and 'QPushButton' in css and 'QPlainTextEdit' in css; print(f'{len(css)} chars — OK')"
 
@@ -251,7 +255,7 @@ jobs:
           import ast
           with open('OmniIDE.spec') as f: content=f.read()
           ast.parse(content); print('Syntax OK')
-          for m in ['src.app','src.config','src.core.file_manager','src.core.git_manager','src.core.git_installer','src.core.extension_manager','src.core.updater','src.core.syntax_highlighter','src.core.tab_manager','src.core.terminal','src.core.search','src.core.command_palette','src.ui.editor_widget','src.ui.sidebar','src.ui.terminal_widget','src.ui.toolbar','src.ui.statusbar','src.ui.menubar','src.ui.command_palette','src.ui.settings_dialog','src.ui.splash','src.ui.theme_stylesheet','src.ui.icons','src.ui.file_tree','src.ui.welcome','src.ui.extensions_panel','src.ui.settings_panel','src.utils.theme_loader','src.utils.recent_files','src.utils.shortcuts','src.utils.styles','src.utils.icon_manager']:
+          for m in ['src.app','src.config','src.core.file_manager','src.core.git_manager','src.core.git_installer','src.core.extension_manager','src.core.updater','src.core.syntax_highlighter','src.core.tab_manager','src.core.terminal','src.core.search','src.core.command_palette','src.core.fuzzy','src.core.quick_open','src.core.project_search','src.core.code_actions','src.core.markdown','src.core.textfile','src.ui.editor_widget','src.ui.sidebar','src.ui.terminal_widget','src.ui.toolbar','src.ui.statusbar','src.ui.menubar','src.ui.command_palette','src.ui.settings_dialog','src.ui.splash','src.ui.theme_stylesheet','src.ui.icons','src.ui.file_tree','src.ui.welcome','src.ui.extensions_panel','src.ui.settings_panel','src.ui.quick_open','src.ui.search_panel','src.ui.minimap','src.utils.theme_loader','src.utils.recent_files','src.utils.shortcuts','src.utils.styles','src.utils.icon_manager']:
               assert m in content, f'MISSING: {m}'
           print('All modules OK')
           "
@@ -267,7 +271,7 @@ jobs:
           for f in docs/index.html docs/style.css docs/script.js docs/favicon.svg; do
             [ -f "$f" ] && echo "OK: $f" || echo "MISSING: $f"
           done
-          grep -q "1.0.7" docs/index.html && echo "v1.0.7 OK" || echo "WARN: version"
+          grep -q "1.1.0" docs/index.html && echo "v1.1.0 OK" || echo "WARN: version"
           grep -q "PyQt6" docs/index.html && echo "PyQt6 OK"
 
   summary:

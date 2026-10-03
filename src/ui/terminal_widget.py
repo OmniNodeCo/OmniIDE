@@ -1,13 +1,12 @@
-"""Interactive terminal — PyQt6."""
+"""Interactive terminal with multiple shell tabs — PyQt6."""
 
 import os
 import sys
 import shutil
-import signal
 
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPlainTextEdit,
-    QLineEdit, QPushButton, QComboBox, QLabel,
+    QLineEdit, QPushButton, QComboBox, QLabel, QTabWidget, QMenu,
 )
 from PyQt6.QtCore import Qt, QProcess, QProcessEnvironment
 from PyQt6.QtGui import QFont, QTextCursor
@@ -35,54 +34,37 @@ def detect_shells():
     return shells
 
 
-class TerminalWidget(QWidget):
-    """Interactive terminal with real shell."""
+class TerminalInstance(QWidget):
+    """One interactive shell session."""
 
-    def __init__(self, app):
+    def __init__(self, app, shells, shell_index=0, title="Shell"):
         super().__init__()
         self.app = app
+        self.shells = shells
         self.process = None
         self.history = []
         self.history_idx = -1
+        self._pending_command = None
 
-        self.shells = detect_shells()
+        c = app.colors
+        font = QFont(app.settings["font_family"], max(9, app.settings["font_size"] - 1))
+        font.setFixedPitch(True)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
-        # Header
-        header = QHBoxLayout()
-        header.setContentsMargins(8, 4, 8, 4)
-
-        header.addWidget(QLabel("TERMINAL"))
-
         self.shell_combo = QComboBox()
-        for name, cmd in self.shells:
-            self.shell_combo.addItem(name, cmd)
+        for name, _ in shells:
+            self.shell_combo.addItem(name)
+        if 0 <= shell_index < len(shells):
+            self.shell_combo.setCurrentIndex(shell_index)
         self.shell_combo.currentIndexChanged.connect(self._restart)
-        header.addWidget(self.shell_combo)
-
-        header.addStretch()
-
-        clear_btn = QPushButton("Clear")
-        clear_btn.clicked.connect(self.clear)
-        header.addWidget(clear_btn)
-
-        restart_btn = QPushButton("Restart")
-        restart_btn.setProperty("cssClass", "primary")
-        restart_btn.clicked.connect(self._restart)
-        header.addWidget(restart_btn)
-
-        layout.addLayout(header)
 
         # Output
         self.output = QPlainTextEdit()
         self.output.setReadOnly(True)
-        font = QFont(app.settings["font_family"], app.settings["font_size"] - 1)
-        font.setFixedPitch(True)
         self.output.setFont(font)
-        c = app.colors
         self.output.setStyleSheet(f"""
             QPlainTextEdit {{
                 background-color: {c['terminal_bg']};
@@ -91,7 +73,6 @@ class TerminalWidget(QWidget):
                 padding: 6px;
             }}
         """)
-        layout.addWidget(self.output, 1)
 
         # Input
         input_row = QHBoxLayout()
@@ -103,6 +84,7 @@ class TerminalWidget(QWidget):
 
         self.input_field = QLineEdit()
         self.input_field.setFont(font)
+        self.input_field.setPlaceholderText("Type a command...")
         self.input_field.returnPressed.connect(self._send)
         input_row.addWidget(self.input_field, 1)
 
@@ -111,15 +93,40 @@ class TerminalWidget(QWidget):
         send_btn.clicked.connect(self._send)
         input_row.addWidget(send_btn)
 
+        layout.addWidget(self.output, 1)
         layout.addLayout(input_row)
 
         self._start_shell()
 
+    def current_shell(self):
+        idx = self.shell_combo.currentIndex()
+        if 0 <= idx < len(self.shells):
+            return self.shells[idx]
+        return self.shells[0]
+
+    def run_command(self, command):
+        """Send a command to this shell (used by 'Run File').
+
+        If the shell has not started yet, the command is queued and sent
+        as soon as it does (``started`` is wired up in _start_shell).
+        """
+        self._pending_command = command
+        if self.process and self.process.state() == QProcess.ProcessState.Running:
+            self._flush_pending()
+
+    def _flush_pending(self):
+        if self._pending_command is None:
+            return
+        cmd, self._pending_command = self._pending_command, None
+        self._write(f">> {cmd}\n")
+        if self.process and self.process.state() == QProcess.ProcessState.Running:
+            self.process.write((cmd + "\n").encode())
+
     def _start_shell(self):
+        self._pending_command = None
         self.stop_shell()
 
-        idx = self.shell_combo.currentIndex()
-        name, cmd = self.shells[idx]
+        name, cmd = self.current_shell()
         shell_path = shutil.which(cmd) or cmd
 
         self._write(f"--- Starting {name} ---\n")
@@ -128,6 +135,7 @@ class TerminalWidget(QWidget):
         self.process.setProcessChannelMode(QProcess.ProcessChannelMode.MergedChannels)
         self.process.readyReadStandardOutput.connect(self._read_output)
         self.process.finished.connect(self._on_finished)
+        self.process.started.connect(self._flush_pending)
 
         env = QProcessEnvironment.systemEnvironment()
         env.insert("TERM", "dumb")
@@ -149,6 +157,7 @@ class TerminalWidget(QWidget):
         if self.process and self.process.state() != QProcess.ProcessState.NotRunning:
             self.process.kill()
             self.process.waitForFinished(2000)
+            self.process = None
 
     def _restart(self):
         self.clear()
@@ -198,3 +207,137 @@ class TerminalWidget(QWidget):
                 self.input_field.clear()
         else:
             super().keyPressEvent(event)
+
+
+class TerminalWidget(QWidget):
+    """Terminal container hosting multiple shell tabs."""
+
+    def __init__(self, app):
+        super().__init__()
+        self.app = app
+        self.shells = detect_shells()
+        self.counter = 0
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        # Header
+        header = QHBoxLayout()
+        header.setContentsMargins(8, 4, 8, 4)
+
+        header.addWidget(QLabel("TERMINAL"))
+        header.addStretch()
+
+        new_btn = QPushButton("+")
+        new_btn.setFixedWidth(28)
+        new_btn.setToolTip("New Terminal (Ctrl+Shift+T)")
+        new_btn.clicked.connect(self.new_terminal)
+        header.addWidget(new_btn)
+
+        copy_btn = QPushButton("Copy All")
+        copy_btn.setToolTip("Copy all output to clipboard")
+        copy_btn.clicked.connect(self.copy_all)
+        header.addWidget(copy_btn)
+
+        clear_btn = QPushButton("Clear")
+        clear_btn.clicked.connect(self.clear)
+        header.addWidget(clear_btn)
+
+        restart_btn = QPushButton("Restart")
+        restart_btn.setProperty("cssClass", "primary")
+        restart_btn.clicked.connect(self._restart)
+        header.addWidget(restart_btn)
+
+        layout.addLayout(header)
+
+        # Tabs
+        self.tabs = QTabWidget()
+        self.tabs.setTabsClosable(True)
+        self.tabs.tabCloseRequested.connect(self._close_tab)
+        self.tabs.tabBar().setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.tabs.tabBar().customContextMenuRequested.connect(self._context_menu)
+        layout.addWidget(self.tabs, 1)
+
+        self.new_terminal()
+
+    # ── Tab management ─────────────────────────────────────────────
+    def new_terminal(self, shell_index=0):
+        self.counter += 1
+        inst = TerminalInstance(self.app, self.shells,
+                                shell_index=shell_index,
+                                title=f"Shell {self.counter}")
+        idx = self.tabs.addTab(inst, f"Shell {self.counter}")
+        self.tabs.setCurrentIndex(idx)
+        return inst
+
+    def current(self):
+        return self.tabs.currentWidget()
+
+    def _close_tab(self, index):
+        inst = self.tabs.widget(index)
+        if self.tabs.count() == 1:
+            # Keep at least one: restart it instead
+            inst._restart()
+            return
+        inst.stop_shell()
+        self.tabs.removeTab(index)
+        if hasattr(inst, "deleteLater"):
+            inst.deleteLater()
+
+    def _context_menu(self, pos):
+        index = self.tabs.tabBar().tabAt(pos)
+        if index < 0:
+            return
+        menu = QMenu(self)
+        menu.addAction("New Terminal", self.new_terminal)
+        menu.addSeparator()
+        menu.addAction("Clear", lambda: self.tabs.widget(index).clear())
+        menu.addAction("Restart", lambda: self.tabs.widget(index)._restart())
+        menu.exec(self.tabs.tabBar().mapToGlobal(pos))
+
+    # ── Backward-compatible single-terminal API ────────────────────
+    def clear(self):
+        inst = self.current()
+        if inst:
+            inst.clear()
+
+    def copy_all(self):
+        inst = self.current()
+        if inst:
+            from PyQt6.QtWidgets import QApplication
+            QApplication.clipboard().setText(inst.output.toPlainText())
+            self.app.set_status("Terminal output copied")
+
+    def _restart(self):
+        inst = self.current()
+        if inst:
+            inst._restart()
+
+    def restart_shell(self):
+        self._restart()
+
+    def stop_shell(self):
+        for i in range(self.tabs.count()):
+            self.tabs.widget(i).stop_shell()
+
+    # Legacy attribute access for old code paths
+    @property
+    def output(self):
+        inst = self.current()
+        return inst.output if inst else None
+
+    @property
+    def input_field(self):
+        inst = self.current()
+        return inst.input_field if inst else None
+
+    @property
+    def shell_combo(self):
+        inst = self.current()
+        return inst.shell_combo if inst else None
+
+    @property
+    def process(self):
+        inst = self.current()
+        return inst.process if inst else None
