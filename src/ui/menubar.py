@@ -86,8 +86,6 @@ class MenuBarBuilder:
 
         # Tools
         tools_menu = menubar.addMenu("Tools")
-        self._add(tools_menu, "Clone VS Code Source", "", app.clone_vscode_source)
-        tools_menu.addSeparator()
         self._add(tools_menu, "Check for Updates", "", app.check_for_updates)
         self._add(tools_menu, "Release Notes", "", app.show_release_notes)
 
