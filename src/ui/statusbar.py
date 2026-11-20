@@ -21,6 +21,9 @@ class StatusBar(QWidget):
 
         layout.addStretch()
 
+        self.problems_label = QLabel("")
+        layout.addWidget(self.problems_label)
+
         self.git_label = QLabel("")
         self.git_label.setProperty("cssClass", "dim")
         layout.addWidget(self.git_label)
@@ -57,6 +60,14 @@ class StatusBar(QWidget):
 
     def set_text(self, text):
         self.status_label.setText(text)
+
+    def set_problems_count(self, count):
+        if count:
+            self.problems_label.setText(f"⚠ {count} problem{'s' if count != 1 else ''}")
+            self.problems_label.setStyleSheet(
+                f"color: {self.app.colors['error']}; font-weight: bold;")
+        else:
+            self.problems_label.setText("")
 
     def update_file_type(self, lang):
         self.filetype_label.setText(lang or "Text")

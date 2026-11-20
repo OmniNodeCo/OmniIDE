@@ -197,6 +197,176 @@ class ExplorerPanel(QWidget):
         self.app.set_status("File tree refreshed")
 
 
+class _FileRow(QWidget):
+    """One changed-file row with action buttons."""
+
+    def __init__(self, app, path, staged, untracked):
+        super().__init__()
+        self.app = app
+        self.path = path
+        self.staged = staged
+        self.untracked = untracked
+
+        row = QHBoxLayout(self)
+        row.setContentsMargins(2, 1, 2, 1)
+        row.setSpacing(4)
+
+        dot = QLabel("●")
+        if untracked:
+            dot.setStyleSheet(f"color: {app.colors['warning']}; font-size: 9px;")
+        elif staged:
+            dot.setStyleSheet(f"color: {app.colors['success']}; font-size: 9px;")
+        else:
+            dot.setStyleSheet(f"color: {app.colors['accent']}; font-size: 9px;")
+        row.addWidget(dot)
+
+        name = QLabel(os.path.basename(path))
+        name.setToolTip(path)
+        name.setStyleSheet("font-size: 12px;")
+        row.addWidget(name, 1)
+
+        def _btn(text, tip, cb, css=None):
+            b = QPushButton(text)
+            b.setFixedWidth(22)
+            b.setFixedHeight(20)
+            b.setToolTip(tip)
+            b.clicked.connect(cb)
+            if css:
+                b.setProperty("cssClass", css)
+            return b
+
+        if not staged:
+            row.addWidget(_btn("S", "Stage", lambda: self._run(["add", "--", self.path])))
+        else:
+            row.addWidget(_btn("U", "Unstage", lambda: self._run(["restore", "--staged", "--", self.path])))
+        row.addWidget(_btn("D", "Discard changes", lambda: self._discard()))
+        row.addWidget(_btn("≡", "View diff", lambda: self._diff()))
+
+    def _run(self, args):
+        gm = self.app.git_manager
+        gm._run(args)
+        self.app.sidebar.git_panel.refresh_file_list()
+
+    def _discard(self):
+        gm = self.app.git_manager
+        if self.untracked:
+            from PyQt6.QtWidgets import QMessageBox
+            r = QMessageBox.question(
+                self, "Discard untracked file",
+                f"Delete '{os.path.basename(self.path)}' permanently?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            )
+            if r == QMessageBox.StandardButton.Yes:
+                try:
+                    os.remove(self.path)
+                except OSError as e:
+                    self.app.set_status(f"Discard failed: {e}")
+        else:
+            from PyQt6.QtWidgets import QMessageBox
+            r = QMessageBox.question(
+                self, "Discard changes",
+                f"Revert changes to '{os.path.basename(self.path)}'?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            )
+            if r == QMessageBox.StandardButton.Yes:
+                if self.staged:
+                    gm._run(["restore", "--staged", "--", self.path])
+                gm._run(["restore", "--", self.path])
+        self.app.sidebar.git_panel.refresh_file_list()
+
+    def _diff(self):
+        gm = self.app.git_manager
+        args = ["diff", "--cached", "--", self.path] if self.staged else ["diff", "--", self.path]
+        ok, out = gm._run(args)
+        if ok and out.strip():
+            self.app.editor_tabs.new_readonly_tab(
+                f"diff: {os.path.basename(self.path)}", out
+            )
+        else:
+            self.app.set_status("No diff for this file")
+
+
+def _parse_porcelain(line):
+    """Parse a git status --porcelain line into (path, staged, untracked)."""
+    if len(line) < 4:
+        return None
+    x, y = line[0], line[1]
+    rest = line[3:].strip()
+    # handle renames "old -> new"
+    if " -> " in rest:
+        rest = rest.split(" -> ", 1)[1]
+    rest = rest.strip('"')
+    if x == "?" and y == "?":
+        return (rest, False, True)
+    staged = x not in (" ", "?")
+    return (rest, staged, False)
+
+
+class GitFileList(QWidget):
+    """Working-tree changed files with per-file actions."""
+
+    def __init__(self, app):
+        super().__init__()
+        self.app = app
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(4)
+
+        header = QHBoxLayout()
+        label = QLabel("WORKING TREE")
+        label.setProperty("cssClass", "dim")
+        label.setFont(QFont("Segoe UI", 8))
+        header.addWidget(label, 1)
+        self.count_label = QLabel("")
+        self.count_label.setProperty("cssClass", "dim")
+        self.count_label.setFont(QFont("Segoe UI", 8))
+        header.addWidget(self.count_label)
+        refresh_btn = QPushButton("↻")
+        refresh_btn.setFixedWidth(24)
+        refresh_btn.setToolTip("Refresh")
+        refresh_btn.clicked.connect(self.refresh)
+        header.addWidget(refresh_btn)
+        layout.addLayout(header)
+
+        self.container = QWidget()
+        self.box = QVBoxLayout(self.container)
+        self.box.setContentsMargins(0, 0, 0, 0)
+        self.box.setSpacing(2)
+        self.box.addStretch()
+        layout.addWidget(self.container)
+
+    def _clear_rows(self):
+        while self.box.count() > 1:  # keep the trailing stretch
+            item = self.box.takeAt(0)
+            w = item.widget()
+            if w:
+                w.deleteLater()
+
+    def refresh(self):
+        gm = self.app.git_manager
+        if not gm.is_repo or not gm.repo_path:
+            self.count_label.setText("not a repo")
+            self._clear_rows()
+            return
+        ok, out = gm._run_nostrip(["status", "--porcelain"])
+        if not ok:
+            return
+        self._clear_rows()
+        entries = []
+        for line in out.split("\n"):
+            if line.strip():
+                parsed = _parse_porcelain(line)
+                if parsed:
+                    entries.append(parsed)
+
+        self.count_label.setText(f"{len(entries)} changed")
+        stretch_index = self.box.count() - 1
+        for path, staged, untracked in entries[:200]:
+            row = _FileRow(self.app, path, staged, untracked)
+            self.box.insertWidget(stretch_index, row)
+
+
 class GitPanel(QWidget):
     """Git source control panel with icons."""
 
@@ -210,6 +380,10 @@ class GitPanel(QWidget):
         layout.setSpacing(4)
 
         layout.addWidget(_header("Source Control"))
+        layout.addWidget(_sep())
+
+        self.git_file_list = GitFileList(app)
+        layout.addWidget(self.git_file_list)
         layout.addWidget(_sep())
 
         layout.addWidget(_section_label("Repository"))
@@ -272,6 +446,10 @@ class GitPanel(QWidget):
         layout.addWidget(branch_btn)
 
         layout.addStretch()
+
+    def refresh_file_list(self):
+        if hasattr(self, "git_file_list"):
+            self.git_file_list.refresh()
 
 
 class ExtensionSignals(QObject):
@@ -558,6 +736,7 @@ class Sidebar(QWidget):
         tabs = [
             ("explorer", "files", "Explorer"),
             ("search", "search", "Search (Ctrl+Shift+F)"),
+            ("problems", "problems", "Problems"),
             ("git", "git", "Git"),
             ("extensions", "extensions", "Extensions"),
         ]
@@ -587,6 +766,10 @@ class Sidebar(QWidget):
         self.search_panel = SearchPanel(app)
         self.stack.addWidget(self.search_panel)
 
+        from src.ui.problems_panel import ProblemsPanel
+        self.problems_panel = ProblemsPanel(app)
+        self.stack.addWidget(self.problems_panel)
+
         self.git_panel = GitPanel(app)
         self.stack.addWidget(self.git_panel)
 
@@ -599,7 +782,9 @@ class Sidebar(QWidget):
         self._switch("explorer")
 
     def _switch(self, panel_id):
-        panels = {"explorer": 0, "search": 1, "git": 2, "extensions": 3}
+        panels = {"explorer": 0, "search": 1, "problems": 2, "git": 3, "extensions": 4}
         self.stack.setCurrentIndex(panels.get(panel_id, 0))
+        if panel_id == "git" and hasattr(self.git_panel, "refresh_file_list"):
+            self.git_panel.refresh_file_list()
         for tid, btn in self.tab_buttons.items():
             btn.setChecked(tid == panel_id)

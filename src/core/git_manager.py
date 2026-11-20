@@ -40,6 +40,20 @@ class GitManager:
         except Exception as e:
             return False, str(e)
 
+    def _run_nostrip(self, args, cwd=None):
+        """Like _run but preserves leading whitespace (porcelain format)."""
+        if not self.git_path:
+            return False, "Git not installed."
+        try:
+            r = subprocess.run(
+                [self.git_path] + args,
+                cwd=cwd or self.repo_path or os.getcwd(),
+                capture_output=True, text=True, timeout=30,
+            )
+            return r.returncode == 0, (r.stdout + r.stderr).rstrip("\n")
+        except Exception as e:
+            return False, str(e)
+
     def _get_branch(self):
         ok, out = self._run(["branch", "--show-current"])
         return out.strip() if ok else "unknown"

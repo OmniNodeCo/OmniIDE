@@ -56,6 +56,12 @@ class FileManager:
         self._update_file_status(filepath, encoding, eol)
         if line and editor:
             self._jump_to_line(editor, line)
+        if editor:
+            try:
+                editor._watch_mtime = os.path.getmtime(filepath)
+            except OSError:
+                pass
+            self.app.check_editor(editor)
         self.app.set_status(f"Opened: {filepath}")
 
     def _update_file_status(self, filepath, encoding, eol):
@@ -156,6 +162,8 @@ class FileManager:
             return False
 
         self.app.editor_tabs.mark_saved(editor)
+        if hasattr(self.app, "check_editor"):
+            self.app.check_editor(editor)
         self.app.set_status(f"Saved: {filepath}")
         return True
 

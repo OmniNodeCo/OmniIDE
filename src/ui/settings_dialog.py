@@ -96,6 +96,7 @@ class SettingsDialog(QDialog):
 
         self._section("Session")
         self._check("Restore Open Files on Start", "restore_session", s.get("restore_session", True))
+        self._check("Watch Files for External Changes", "file_watch", s.get("file_watch", True))
 
         self._section("Files")
         self._check("Show Hidden Files", "show_hidden_files", s.get("show_hidden_files", False))
@@ -104,6 +105,7 @@ class SettingsDialog(QDialog):
         self._section("Terminal")
         self._combo("Shell", "default_shell", s.get("default_shell", "auto"),
                     ["auto", "bash", "zsh", "powershell", "cmd", "fish"])
+        self._spin("Max Scrollback Lines", "terminal_max_lines", s.get("terminal_max_lines", 5000), 500, 50000)
 
         self._section("Updates")
         self._check("Auto Check Updates", "auto_check_updates", s.get("auto_check_updates", True))
@@ -212,6 +214,16 @@ class SettingsDialog(QDialog):
                 viewport = getattr(editor, "viewport", None)
                 if callable(viewport):
                     viewport().update()
+        elif key == "terminal_max_lines":
+            for i in range(self.app.terminal.tabs.count()):
+                inst = self.app.terminal.tabs.widget(i)
+                if hasattr(inst, "output"):
+                    inst.output.setMaximumBlockCount(int(value))
+        elif key == "file_watch":
+            if value:
+                self.app._filewatch_timer.start()
+            else:
+                self.app._filewatch_timer.stop()
 
         self.app.save_settings()
 

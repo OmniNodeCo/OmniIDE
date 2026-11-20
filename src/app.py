@@ -7,7 +7,9 @@ from PyQt6.QtWidgets import (
     QMainWindow, QSplitter, QTabWidget, QWidget, QVBoxLayout,
     QHBoxLayout, QFileDialog, QMessageBox, QApplication,
 )
-from PyQt6.QtCore import Qt, QTimer
+import threading
+
+from PyQt6.QtCore import Qt, QTimer, QObject, pyqtSignal
 from PyQt6.QtGui import QFont, QFontDatabase, QIcon, QShortcut, QKeySequence, QTextCursor
 
 from src.config import (
@@ -33,6 +35,11 @@ from src.ui.command_palette import CommandPaletteDialog
 from src.ui.settings_dialog import SettingsDialog
 from src.ui.splash import SplashScreen
 from src.ui.theme_stylesheet import build_stylesheet
+from src.core import code_check
+
+
+class _CheckSignals(QObject):
+    done = pyqtSignal(str, list)   # (path, [(line, message)])
 
 
 class OmniIDEApp(QMainWindow):
@@ -66,6 +73,7 @@ class OmniIDEApp(QMainWindow):
         self.extension_manager = ExtensionManager(self)
         self.updater = Updater(self)
         self.recent_folders = RecentFolders()
+        self._init_problems()
 
         self.splash.set_progress(35)
         self.splash.set_status("Building interface...")
@@ -94,6 +102,7 @@ class OmniIDEApp(QMainWindow):
 
         self._setup_shortcuts()
         self._setup_autosave()
+        self._setup_file_watch()
 
         self.splash.set_progress(100)
         self.splash.set_status("Ready!")
@@ -106,9 +115,12 @@ class OmniIDEApp(QMainWindow):
         self.splash.close()
         restored = self._restore_session()
         if not restored:
-            self.editor_tabs.add_welcome_tab()
+            self.editor_tabs.new_welcome_tab()
         self.git_installer.check_and_prompt()
         self.updater.check_on_startup()
+
+    def show_welcome(self):
+        self.editor_tabs.new_welcome_tab()
 
     def _restore_session(self):
         """Reopen files from the last session. Returns True if anything opened."""
@@ -281,6 +293,7 @@ class OmniIDEApp(QMainWindow):
             "Alt+Down": self.move_line_down,
             "Ctrl+Shift+O": self.sort_lines,
             "Ctrl+Shift+V": self.toggle_markdown_preview,
+            "Ctrl+T": self.go_to_symbol,
             "Ctrl+F5": self.run_current_file,
             "Ctrl+=": lambda: self._zoom(1),
             "Ctrl+-": lambda: self._zoom(-1),
@@ -462,6 +475,105 @@ class OmniIDEApp(QMainWindow):
 
     def show_release_notes(self):
         self.updater.show_release_notes()
+
+    def go_to_symbol(self):
+        editor = self.editor_tabs.get_current_code_editor()
+        if not editor or not getattr(editor, "filepath", None):
+            self.set_status("Open a source file first")
+            return
+        from src.core.symbols import extract_symbols
+        from src.ui.symbol_dialog import SymbolDialog
+        symbols = extract_symbols(editor.get_content(), editor.filepath)
+        if not symbols:
+            self.set_status("No symbols found in this file")
+            return
+        SymbolDialog(self, symbols).exec()
+
+    # ── File watcher (external changes) ────────────────────────
+    def _setup_file_watch(self):
+        self._filewatch_timer = QTimer(self)
+        self._filewatch_timer.setInterval(2000)
+        self._filewatch_timer.timeout.connect(self._check_external_changes)
+        if self.settings.get("file_watch", True):
+            self._filewatch_timer.start()
+        for ed in self.editor_tabs.all_editors():
+            fp = getattr(ed, "filepath", None)
+            if fp and os.path.isfile(fp):
+                try:
+                    ed._watch_mtime = os.path.getmtime(fp)
+                except OSError:
+                    pass
+
+    def _check_external_changes(self):
+        if not self.settings.get("file_watch", True):
+            return
+        from PyQt6.QtWidgets import QMessageBox
+        for ed in self.editor_tabs.all_editors():
+            fp = getattr(ed, "filepath", None)
+            if not fp or not os.path.isfile(fp):
+                continue
+            try:
+                mtime = os.path.getmtime(fp)
+            except OSError:
+                continue
+            last = getattr(ed, "_watch_mtime", None)
+            if last is None:
+                ed._watch_mtime = mtime
+                continue
+            if mtime == last:
+                continue
+            ed._watch_mtime = mtime
+            try:
+                with open(fp, "r", encoding="utf-8", errors="replace") as f:
+                    text = f.read()
+            except OSError:
+                continue
+            if ed.get_content() == text:
+                continue
+            if getattr(ed, "modified", False):
+                r = QMessageBox.question(
+                    self, "File Changed on Disk",
+                    f"'{os.path.basename(fp)}' changed on disk and has unsaved "
+                    "changes here.\nReload and discard your changes?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                )
+                if r != QMessageBox.StandardButton.Yes:
+                    continue
+            ed.set_content(text)
+            self.set_status(f"Reloaded: {os.path.basename(fp)}")
+            self.check_editor(ed)
+
+    # ── Problems (syntax/JSON checks) ───────────────────────────
+    def _init_problems(self):
+        self._check_signals = _CheckSignals()
+        self._check_signals.done.connect(self._on_checked)
+
+    def check_editor(self, editor):
+        """Run syntax/JSON checks for one editor (threaded)."""
+        path = getattr(editor, "filepath", None)
+        if not path:
+            return
+        ext = os.path.splitext(path)[1].lower()
+        if ext not in (".py", ".pyw", ".json"):
+            return
+        text = editor.get_content()
+
+        def _worker():
+            problems = code_check.check_text(text, path)
+            self._check_signals.done.emit(path, problems)
+
+        threading.Thread(target=_worker, daemon=True).start()
+
+    def check_open_files(self):
+        for ed in self.editor_tabs.all_editors():
+            self.check_editor(ed)
+
+    def _on_checked(self, path, problems):
+        self.sidebar.problems_panel.set_problems(path, problems)
+        ed = self.editor_tabs.find_editor_for_file(path)
+        if ed is not None:
+            ed.set_problems(problems)
+        self.statusbar.set_problems_count(self.sidebar.problems_panel.total_count())
 
     # ── Run file ─────────────────────────────────────────────────
     def run_current_file(self):

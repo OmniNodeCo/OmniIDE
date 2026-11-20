@@ -232,7 +232,7 @@ def main():
     try:
         w.file_manager.open_file(os.path.join(proj, "src", "utils.py"))
         w._on_editor_tab_changed(0)
-        crumbs = [p.text() for p in w.breadcrumbs._crumbs if p.text()]
+        crumbs = [p.text() for p in w.breadcrumbs._dynamic if p.text()]
         check("breadcrumbs show file", "utils.py" in crumbs, str(crumbs))
         check("breadcrumbs show dir", "src" in crumbs, str(crumbs))
     except Exception:

@@ -67,6 +67,8 @@ DEFAULT_SETTINGS = {
     "indent_guides": True,
     "restore_session": True,
     "max_recent_folders": 10,
+    "terminal_max_lines": 5000,
+    "file_watch": True,
 }
 
 SUPPORTED_EXTENSIONS = {

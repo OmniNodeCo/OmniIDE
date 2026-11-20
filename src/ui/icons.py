@@ -56,6 +56,8 @@ SVGS = {
 
     "play": """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><polygon points="4,2.5 13,8 4,13.5" fill="#a6e3a1"/></svg>""",
 
+    "problems": """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M8 1.5l7 12.5H1z" fill="none" stroke="#f38ba8" stroke-width="1.4" stroke-linejoin="round"/><line x1="8" y1="6" x2="8" y2="10" stroke="#f38ba8" stroke-width="1.6" stroke-linecap="round"/><circle cx="8" cy="12" r="0.9" fill="#f38ba8"/></svg>""",
+
     "file_generic": """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M3.5 1.5h6l3 3v10h-9v-13z" fill="#313244" stroke="#89b4fa" stroke-width="1" stroke-linejoin="round"/><path d="M9.5 1.5v3h3" fill="none" stroke="#89b4fa" stroke-width="1"/></svg>""",
 
     "file_py": """<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path d="M3.5 1.5h6l3 3v10h-9v-13z" fill="#313244" stroke="#f9e2af" stroke-width="1" stroke-linejoin="round"/><text x="8" y="11.5" font-family="monospace" font-size="6.5" font-weight="bold" fill="#f9e2af" text-anchor="middle">PY</text></svg>""",

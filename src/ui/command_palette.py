@@ -85,6 +85,8 @@ class CommandPaletteDialog(QDialog):
             ("File: Close All Tabs", "", et.close_all_tabs),
             ("Edit: Find & Replace", "Ctrl+F", app.toggle_search),
             ("Edit: Go to Line", "Ctrl+G", app.go_to_line),
+            ("Edit: Go to Symbol", "Ctrl+T", app.go_to_symbol),
+            ("Problems: Check All Open Files", "", app.check_open_files),
             ("Edit: Toggle Comment", "Ctrl+/", app.toggle_comment),
             ("Edit: Duplicate Line", "Ctrl+D", app.duplicate_line),
             ("Edit: Delete Line", "Ctrl+Shift+D", app.delete_line),

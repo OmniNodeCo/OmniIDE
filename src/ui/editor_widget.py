@@ -12,6 +12,7 @@ from PyQt6.QtCore import Qt, QRect, QSize, QRegularExpression, QTimer, QEvent
 from PyQt6.QtGui import (
     QFont, QColor, QPainter, QTextFormat, QSyntaxHighlighter,
     QTextCharFormat, QTextCursor, QDragEnterEvent, QAction,
+    QBrush, QPen,
 )
 
 from src.config import APP_NAME, APP_VERSION, APP_AUTHOR, SUPPORTED_EXTENSIONS
@@ -137,6 +138,9 @@ class CodeEditor(QPlainTextEdit):
 
         # Overlay paints (whitespace, indent guides)
         self.viewport().installEventFilter(self)
+
+        # Problems: line_number -> message (for gutter markers)
+        self.problems = {}
 
     # ── Overlays: whitespace + indent guides ─────────────────────
     def eventFilter(self, obj, event):
@@ -271,6 +275,7 @@ class CodeEditor(QPlainTextEdit):
         )
         bottom = top + round(self.blockBoundingRect(block).height())
 
+        err_color = QColor(c.get("error", "#f38ba8"))
         while block.isValid() and top <= event.rect().bottom():
             if block.isVisible() and bottom >= event.rect().top():
                 number = str(block_number + 1)
@@ -286,6 +291,12 @@ class CodeEditor(QPlainTextEdit):
                     self.fontMetrics().height(),
                     Qt.AlignmentFlag.AlignRight, number,
                 )
+                # Problem marker on the left edge of the gutter
+                if (block_number + 1) in self.problems:
+                    painter.setPen(Qt.PenStyle.NoPen)
+                    painter.setBrush(QBrush(err_color))
+                    mid = top + self.fontMetrics().height() // 2
+                    painter.drawEllipse(1, mid - 3, 6, 6)
             block = block.next()
             top = bottom
             bottom = top + round(self.blockBoundingRect(block).height())
@@ -391,6 +402,11 @@ class CodeEditor(QPlainTextEdit):
     def set_content(self, text):
         self.setPlainText(text)
         self.modified = False
+
+    def set_problems(self, problems):
+        """problems: [(line, message)]. Updates gutter markers."""
+        self.problems = {line: msg for line, msg in problems}
+        self.line_number_area.update()
 
     def refresh_colors(self):
         c = self.app.colors
@@ -657,8 +673,15 @@ class SearchWidget(QWidget):
         self.find_input = QLineEdit()
         self.find_input.setPlaceholderText("Search...")
         self.find_input.returnPressed.connect(self.find_next)
+        self.find_input.returnPressed.connect(self._record_history)
         self.find_input.textChanged.connect(self.find_all)
         find_row.addWidget(self.find_input, 1)
+
+        self.history_btn = QPushButton("▾")
+        self.history_btn.setFixedWidth(24)
+        self.history_btn.setToolTip("Recent searches")
+        self.history_btn.clicked.connect(self._show_history)
+        find_row.addWidget(self.history_btn)
 
         self.match_label = QLabel("")
         find_row.addWidget(self.match_label)
@@ -676,6 +699,11 @@ class SearchWidget(QWidget):
         self.regex_check.setToolTip("Regular expression")
         self.regex_check.stateChanged.connect(self._on_flags_changed)
         find_row.addWidget(self.regex_check)
+
+        self.sel_check = QCheckBox("In Sel")
+        self.sel_check.setToolTip("Search/replace within the current selection")
+        self.sel_check.stateChanged.connect(self._on_flags_changed)
+        find_row.addWidget(self.sel_check)
 
         prev_btn = QPushButton("<")
         prev_btn.setFixedWidth(30)
@@ -732,6 +760,25 @@ class SearchWidget(QWidget):
             return query
         return re.escape(query)
 
+    def _compile(self):
+        flags = re.IGNORECASE if not self.case_check.isChecked() else 0
+        try:
+            rx = re.compile(self._query_text(), flags)
+        except re.error:
+            return None
+        if self.word_check.isChecked():
+            rx = re.compile(rf"(?<!\w)({rx.pattern})(?!\w)", flags)
+        return rx
+
+    def _scope(self, editor):
+        """Return (start_offset, text) for the search scope."""
+        if self.sel_check.isChecked():
+            c = editor.textCursor()
+            if c.hasSelection():
+                start = c.selectionStart()
+                return start, editor.get_content()[start:c.selectionEnd()]
+        return 0, editor.get_content()
+
     def find_all(self):
         editor = self.editor_tabs.get_current_editor()
         if not editor:
@@ -743,18 +790,14 @@ class SearchWidget(QWidget):
             self.match_label.setText("")
             return
 
-        try:
-            rx = re.compile(self._query_text(),
-                            re.IGNORECASE if not self.case_check.isChecked() else 0)
-        except re.error:
+        rx = self._compile()
+        if rx is None:
             self.match_label.setText("bad regex")
             return
-        if self.word_check.isChecked():
-            rx = re.compile(rf"(?<!\w)({rx.pattern})(?!\w)",
-                            re.IGNORECASE if not self.case_check.isChecked() else 0)
 
+        _start, scope_text = self._scope(editor)
         count = 0
-        for line in editor.toPlainText().split("\n"):
+        for line in scope_text.split("\n"):
             count += len(rx.findall(line))
         self.match_label.setText(f"{count} match{'es' if count != 1 else ''}")
 
@@ -773,40 +816,16 @@ class SearchWidget(QWidget):
         if not query:
             return
 
-        find_flags = QTextEdit.FindFlag(0)
-        if self.case_check.isChecked():
-            find_flags |= QTextEdit.FindFlag.FindCaseSensitively
-        if not forward:
-            find_flags |= QTextEdit.FindFlag.FindBackward
-        if self.word_check.isChecked():
-            find_flags |= QTextEdit.FindFlag.FindWholeWords
-
-        # Plain text search (regex matching in QPlainTextEdit.find is not
-        # available; whole word + case cover most needs, and the status bar
-        # shows regex match counts via find_all)
-        if not self.regex_check.isChecked():
-            if not editor.find(query, find_flags):
-                cursor = editor.textCursor()
-                if forward:
-                    cursor.movePosition(QTextCursor.MoveOperation.Start)
-                else:
-                    cursor.movePosition(QTextCursor.MoveOperation.End)
-                editor.setTextCursor(cursor)
-                editor.find(query, find_flags)
+        rx = self._compile()
+        if rx is None:
             return
 
-        # Regex search: scan the document ourselves
-        try:
-            rx = re.compile(query,
-                            re.IGNORECASE if not self.case_check.isChecked() else 0)
-        except re.error:
-            return
-
-        text = editor.toPlainText()
-        cursor_pos = editor.textCursor().position()
-        matches = [(m.start(), m.end()) for m in rx.finditer(text)]
+        start, scope_text = self._scope(editor)
+        matches = [(m.start(), m.end()) for m in rx.finditer(scope_text)]
         if not matches:
             return
+
+        cursor_pos = editor.textCursor().position() - start
         if forward:
             match = next(((s, e) for s, e in matches if e > cursor_pos), None) \
                 or matches[0]
@@ -814,8 +833,8 @@ class SearchWidget(QWidget):
             match = next(((s, e) for s, e in reversed(matches) if s < cursor_pos), None) \
                 or matches[-1]
         c = editor.textCursor()
-        c.setPosition(match[0])
-        c.setPosition(match[1], QTextCursor.MoveMode.KeepAnchor)
+        c.setPosition(start + match[0])
+        c.setPosition(start + match[1], QTextCursor.MoveMode.KeepAnchor)
         editor.setTextCursor(c)
         editor.ensureCursorVisible()
 
@@ -846,23 +865,47 @@ class SearchWidget(QWidget):
         if not query:
             return
 
-        text = editor.toPlainText()
-        flags = 0 if self.case_check.isChecked() else re.IGNORECASE
-        try:
-            pattern = re.compile(self._query_text(), flags)
-            if self.word_check.isChecked():
-                pattern = re.compile(
-                    rf"(?<!\w)({pattern.pattern})(?!\w)", flags
-                )
-            count = len(pattern.findall(text))
-            text = pattern.sub(
-                lambda m: replacement, text
-            )
-        except re.error:
-            count = 0
+        rx = self._compile()
+        if rx is None:
+            return
 
-        editor.setPlainText(text)
-        self.editor_tabs.app.set_status(f"Replaced {count} occurrences")
+        start, scope_text = self._scope(editor)
+        full = editor.get_content()
+        try:
+            count = len(rx.findall(scope_text))
+            new_scope = rx.sub(lambda m: replacement, scope_text)
+        except re.error:
+            return
+
+        editor.set_content(full[:start] + new_scope + full[start + len(scope_text):])
+        self.editor_tabs.app.set_status(f"Replaced {count} occurrence{'s' if count != 1 else ''}")
+
+    # ── Search history ───────────────────────────────────────────
+    def _record_history(self):
+        q = self.find_input.text().strip()
+        if not q:
+            return
+        settings = self.editor_tabs.app.settings
+        hist = settings.setdefault("search_history", [])
+        if q in hist:
+            hist.remove(q)
+        hist.insert(0, q)
+        settings["search_history"] = hist[:10]
+        self.editor_tabs.app.save_settings()
+
+    def _show_history(self):
+        from PyQt6.QtWidgets import QMenu
+        menu = QMenu(self)
+        hist = self.editor_tabs.app.settings.get("search_history", [])
+        if not hist:
+            act = menu.addAction("(no recent searches)")
+            act.setEnabled(False)
+        for q in hist:
+            act = menu.addAction(q)
+            act.triggered.connect(
+                lambda _=False, qq=q: (self.find_input.setText(qq), self.find_all()))
+        menu.exec(self.history_btn.mapToGlobal(
+            self.history_btn.rect().bottomLeft()))
 
 
 class EditorTabWidget(QWidget):
@@ -980,6 +1023,34 @@ class EditorTabWidget(QWidget):
         preview._tab_id = tab_id
         return tab_id
 
+    def new_welcome_tab(self):
+        """Add the full welcome-screen tab."""
+        from src.ui.welcome_widget import WelcomeWidget
+        self.tab_counter += 1
+        tab_id = f"tab_{self.tab_counter}"
+        welcome = WelcomeWidget(self.app)
+        idx = self.tabs.addTab(welcome, f"Welcome")
+        self.tabs.setTabIcon(idx, svg_icon("file_generic", 14))
+        self.tabs.setCurrentIndex(idx)
+        self.editors[tab_id] = {"editor": welcome, "filepath": None, "title": "Welcome"}
+        welcome._tab_id = tab_id
+        return tab_id
+
+    def new_readonly_tab(self, title, text):
+        """Add a read-only text tab (e.g. git diff output)."""
+        self.tab_counter += 1
+        tab_id = f"tab_{self.tab_counter}"
+        editor = CodeEditor(self.app, filepath=None)
+        editor.setReadOnly(True)
+        editor.set_content(text)
+        idx = self.tabs.addTab(editor, title)
+        self.tabs.setTabIcon(idx, svg_icon("file_generic", 14))
+        self.tabs.setCurrentIndex(idx)
+        self.editors[tab_id] = {"editor": editor, "filepath": None, "title": title}
+        editor._tab_id = tab_id
+        self.app.set_status(f"Opened: {title}")
+        return tab_id
+
     def all_editors(self):
         return [self.tabs.widget(i) for i in range(self.tabs.count())]
 
@@ -1030,9 +1101,20 @@ class EditorTabWidget(QWidget):
             else:
                 idx += 1
 
+    def _remove_problems_for(self, editor):
+        path = getattr(editor, "filepath", None)
+        if path and hasattr(self.app, "sidebar"):
+            try:
+                self.app.sidebar.problems_panel.set_problems(path, [])
+                self.app.statusbar.set_problems_count(
+                    self.app.sidebar.problems_panel.total_count())
+            except Exception:
+                pass
+
     def close_tab_silent(self, index):
         """Close a tab without save prompts (used for close all)."""
         editor = self.tabs.widget(index)
+        self._remove_problems_for(editor)
         tab_id = getattr(editor, "_tab_id", None)
         if tab_id and tab_id in self.editors:
             del self.editors[tab_id]
@@ -1060,6 +1142,7 @@ class EditorTabWidget(QWidget):
         if isinstance(editor, CodeEditor) and getattr(editor, "modified", False):
             if not self._confirm_save(index):
                 return
+        self._remove_problems_for(editor)
         tab_id = getattr(editor, "_tab_id", None)
         if tab_id and tab_id in self.editors:
             del self.editors[tab_id]
@@ -1190,7 +1273,7 @@ class BreadcrumbBar(QWidget):
         super().__init__()
         self.app = app
         self.setFixedHeight(26)
-        self._parts = []
+        self._dynamic = []
         self._build()
 
     def _build(self):
@@ -1208,25 +1291,27 @@ class BreadcrumbBar(QWidget):
         self.layout.addStretch()
 
     def refresh(self):
-        # Clear old crumbs
-        for part in self._parts:
+        # Remove previously built crumbs
+        for part in self._dynamic:
             self.layout.removeWidget(part)
             part.deleteLater()
-        self._parts = []
-        self._crumbs[0].setText("No file")
-        self._crumbs[0].setStyleSheet(
-            f"color: {self.app.colors['fg_secondary']};")
+        self._dynamic = []
 
+        root_label = self._crumbs[0]
         editor = self.app.editor_tabs.get_current_code_editor()
         path = getattr(editor, "filepath", None) if editor else None
         if not path:
+            root_label.setText("No file")
+            root_label.setVisible(True)
             return
 
-        # Build the path segments (file name first, then parent dirs up)
+        root_label.setVisible(False)
+
+        # Build the path segments (dirs first, file name last)
         root = os.path.abspath(path)
         segments = [(os.path.basename(root) or root, root)]
         cur = os.path.dirname(root)
-        while cur and len(segments) < 8:
+        while cur and cur != "/" and len(segments) < 8:
             name = os.path.basename(cur) or cur
             segments.insert(0, (name, cur))
             parent = os.path.dirname(cur)
@@ -1234,28 +1319,25 @@ class BreadcrumbBar(QWidget):
                 break
             cur = parent
 
-        insert_at = 1  # after the fixed "No file"/root label
         for i, (name, p) in enumerate(segments):
             btn = QPushButton(name)
             btn.setFlat(True)
             btn.setCursor(Qt.CursorShape.PointingHandCursor)
+            is_file = (i == len(segments) - 1)
             btn.setStyleSheet(
-                f"QPushButton {{ border: none; color: {self.app.colors['fg_primary'] if i == len(segments) - 1 else self.app.colors['fg_secondary']}; "
+                f"QPushButton {{ border: none; color: {self.app.colors['fg_primary'] if is_file else self.app.colors['fg_secondary']}; "
                 f"padding: 2px 6px; border-radius: 4px; font-size: 11px; }}"
                 f"QPushButton:hover {{ background-color: {self.app.colors['bg_tertiary']}; "
                 f"color: {self.app.colors['accent']}; }}"
             )
             btn.clicked.connect(lambda _=False, pp=p: self._jump_to(pp))
-            self._crumbs.append(btn)
-            self.layout.insertWidget(insert_at, btn)
-            insert_at += 1
+            self._dynamic.append(btn)
+            self.layout.insertWidget(1 + len(self._dynamic) - 1, btn)
             if i < len(segments) - 1:
                 sep = QLabel("›")
                 sep.setStyleSheet(f"color: {self.app.colors['fg_secondary']};")
-                self._crumbs.append(sep)
-                self.layout.insertWidget(insert_at, sep)
-                insert_at += 1
-        self._crumbs[0].setVisible(False)
+                self._dynamic.append(sep)
+                self.layout.insertWidget(1 + len(self._dynamic) - 1, sep)
 
     def _jump_to(self, path):
         if os.path.isdir(path):

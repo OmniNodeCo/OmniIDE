@@ -233,6 +233,11 @@ jobs:
           app.quit()
           "
 
+      - name: Functional suites (offscreen)
+        run: |
+          python tests/test_features_offscreen.py
+          python tests/test_features_gui_v2.py
+
   spec:
     name: "Spec Validation"
     runs-on: ubuntu-latest

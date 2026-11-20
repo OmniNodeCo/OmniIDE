@@ -54,6 +54,7 @@
 - Convert Case — UPPER/lower/Title/camel/Pascal/snake/kebab
 - Format JSON, Revert File
 - Go to Line (`Ctrl+G`)
+- Go to Symbol (`Ctrl+T`) — fuzzy jump to functions/classes
 - Markdown preview (`Ctrl+Shift+V`) — built-in converter
 - JSON validation with error marker on save
 - Whitespace view + indent guides (Settings)
@@ -67,7 +68,8 @@
 
 ### Navigation & Search
 - **Quick Open** (`Ctrl+P`) — fuzzy file finder
-- **Search in Files** (`Ctrl+Shift+F`) — project-wide search panel with line numbers, case / whole-word / regex
+- **Search in Files** (`Ctrl+Shift+F`) — project-wide search panel with line numbers, case / whole-word / regex, in-selection mode
+- **Problems panel** — live Python/JSON error checking with gutter markers and click-to-jump
 - Breadcrumbs bar (click to expand tree)
 - **Run File** (`Ctrl+F5`) — Run menu, toolbar, palette; dedicated terminal tab
 - Command Palette (`Ctrl+Shift+P`) — 55+ fuzzy-ranked commands
@@ -80,7 +82,7 @@
 
 ### Terminal
 - Multiple terminal tabs (`Ctrl+Shift+T`)
-- Real interactive shell (QProcess)
+- Real interactive shell (QProcess) with ANSI color output
 - Auto-detects shells per OS
 - Shell selector dropdown
 - Per-session command history
@@ -101,6 +103,7 @@
 - Minimap (bar-style document overview)
 - VS Code Marketplace browser, VSIX install
 - Git: clone, commit, push, pull, diff, log, branches
+- Git working tree: stage / unstage / discard / diff per file
 - Dark & light Catppuccin themes
 - Auto-update checker (GitHub Releases) with release-notes dialog
 
@@ -143,6 +146,7 @@ python run.py
 | Find & Replace | `Ctrl+F` |
 | Search in Files | `Ctrl+Shift+F` |
 | Go to Line | `Ctrl+G` |
+| Go to Symbol | `Ctrl+T` |
 | Toggle Comment | `Ctrl+/` |
 | Duplicate Line | `Ctrl+D` |
 | Delete Line | `Ctrl+Shift+D` |
@@ -173,6 +177,9 @@ python -m unittest discover tests
 ## Changelog
 
 **v1.1.0 (Latest)**
+- Problems panel — live Python/JSON error checking with gutter markers and status count
+- Go to Symbol (Ctrl+T), Git working-tree list (stage/discard/diff)
+- ANSI-colored terminal with scrollback limit
 - Run File (Ctrl+F5) — Run menu + toolbar; runs Python/JS/Shell/Ruby/Go/TS and more in a dedicated terminal tab
 - Convert Case — UPPER/lower/Title/camel/Pascal/snake/kebab (selection or word)
 - Format JSON, Revert File

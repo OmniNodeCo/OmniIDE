@@ -5,7 +5,15 @@ All notable changes to OmniIDE are documented here.
 ## [1.1.0] — 2026-08-23
 
 ### Added
+- **Problems panel** — live Python syntax + JSON error checking (threaded) with sidebar list, red gutter markers, status-bar count, click-to-jump
+- **Go to Symbol** (`Ctrl+T`) — fuzzy jump to functions/classes/consts; Python, JS/TS, Go, Rust, C, Ruby, PHP, Java
+- **Git working tree** — changed-files list in Source Control with per-file Stage / Unstage / Discard / Diff (read-only diff tab)
+- **ANSI-colored terminal** — SGR parsing (16/256/truecolor, bold, underline), `xterm-256color`, scrollback limit
 - **Run File** (`Ctrl+F5`) — Run menu, toolbar play button, and palette; detects Python/JS/Shell/Ruby/Perl/PHP/Lua/PowerShell/Go/TS and runs in a dedicated terminal tab
+- **New welcome screen** — logo, quick actions, recent files, recent folders, shortcut cheatsheet
+- **Find & Replace in selection** ("In Sel") with live search history menu
+- **File watcher** — detect external changes, prompt reload (Settings → Session)
+- **Website** — real rendered screenshots, lightbox, updated feature cards
 - **Convert Case** — UPPERCASE, lowercase, Title, camelCase, PascalCase, snake_case, kebab-case (Edit menu + palette); works on selection or current word
 - **Format JSON** — pretty-prints the open JSON file (Edit menu + palette)
 - **Revert File** — reload from disk, discarding unsaved changes (with confirmation)

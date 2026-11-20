@@ -64,7 +64,7 @@
             <div class="feature-card">
                 <div class="feature-icon-svg"><svg viewBox="0 0 24 24" width="32" height="32"><rect x="2" y="3" width="20" height="18" rx="3" fill="none" stroke="#a6e3a1" stroke-width="1.5"/><polyline points="6,9 9,12 6,15" fill="none" stroke="#a6e3a1" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="15" x2="18" y2="15" stroke="#a6e3a1" stroke-width="1.5" stroke-linecap="round"/></svg></div>
                 <h3>Real Terminal</h3>
-                <p>QProcess interactive shell. Bash, PowerShell, CMD, Zsh, Fish. History and restart.</p>
+                <p>QProcess interactive shell with ANSI colors. Multi-tab, 256/truecolor, history, copy all.</p>
             </div>
             <div class="feature-card">
                 <div class="feature-icon-svg"><svg viewBox="0 0 24 24" width="32" height="32"><circle cx="12" cy="12" r="9" fill="none" stroke="#f38ba8" stroke-width="1.5"/><circle cx="12" cy="6" r="1.5" fill="#f38ba8"/><circle cx="12" cy="18" r="1.5" fill="#f38ba8"/><line x1="12" y1="7.5" x2="12" y2="16.5" stroke="#f38ba8" stroke-width="1.2"/></svg></div>
@@ -133,22 +133,20 @@
         <h2>Screenshots</h2>
         <p class="section-sub">Click to enlarge</p>
         <div class="screenshots-grid">
-            <div class="screenshot-placeholder" onclick="openLightbox(this)"><div class="placeholder-content"><span>Editor</span><small>PyQt6 dark theme</small></div></div>
-            <div class="screenshot-placeholder" onclick="openLightbox(this)"><div class="placeholder-content"><span>Terminal</span><small>QProcess shell</small></div></div>
-            <div class="screenshot-placeholder" onclick="openLightbox(this)"><div class="placeholder-content"><span>Git</span><small>SVG icon buttons</small></div></div>
-            <div class="screenshot-placeholder" onclick="openLightbox(this)"><div class="placeholder-content"><span>Extensions</span><small>Marketplace cards</small></div></div>
-            <div class="screenshot-placeholder" onclick="openLightbox(this)"><div class="placeholder-content"><span>Palette</span><small>Command search</small></div></div>
-            <div class="screenshot-placeholder" onclick="openLightbox(this)"><div class="placeholder-content"><span>Quick Open</span><small>Ctrl+P fuzzy finder</small></div></div>
-            <div class="screenshot-placeholder" onclick="openLightbox(this)"><div class="placeholder-content"><span>Search</span><small>Project-wide results</small></div></div>
-            <div class="screenshot-placeholder" onclick="openLightbox(this)"><div class="placeholder-content"><span>Preview</span><small>Markdown rendered</small></div></div>
-            <div class="screenshot-placeholder" onclick="openLightbox(this)"><div class="placeholder-content"><span>Settings</span><small>Visual editor</small></div></div>
+            <figure class="screenshot" onclick="openLightbox(this)" data-title="Code Editor" data-desc="Syntax highlighting, line numbers, problem markers, breadcrumbs"><img src="img/editor.png" alt="OmniIDE code editor" loading="lazy"><figcaption>Code Editor<small>Syntax, gutter markers, breadcrumbs</small></figcaption></figure>
+            <figure class="screenshot" onclick="openLightbox(this)" data-title="Terminal" data-desc="ANSI-colored output, multiple shell tabs, Copy All"><img src="img/terminal.png" alt="OmniIDE terminal" loading="lazy"><figcaption>Terminal<small>ANSI colors, multi-tab</small></figcaption></figure>
+            <figure class="screenshot" onclick="openLightbox(this)" data-title="Search in Files" data-desc="Project-wide search with line numbers and match counts"><img src="img/search.png" alt="OmniIDE search panel" loading="lazy"><figcaption>Search in Files<small>Project-wide results</small></figcaption></figure>
+            <figure class="screenshot" onclick="openLightbox(this)" data-title="Problems" data-desc="Live syntax/JSON error checking with gutter markers"><img src="img/problems.png" alt="OmniIDE problems panel" loading="lazy"><figcaption>Problems<small>Live error checking</small></figcaption></figure>
+            <figure class="screenshot" onclick="openLightbox(this)" data-title="Git" data-desc="Working-tree file list with stage, discard and diff actions"><img src="img/git.png" alt="OmniIDE git panel" loading="lazy"><figcaption>Source Control<small>Stage, discard, diff</small></figcaption></figure>
+            <figure class="screenshot" onclick="openLightbox(this)" data-title="Markdown Preview" data-desc="Built-in dependency-free markdown rendering"><img src="img/preview.png" alt="OmniIDE markdown preview" loading="lazy"><figcaption>Markdown Preview<small>Built-in renderer</small></figcaption></figure>
         </div>
         <p class="contribute-note">Add screenshots via <a href="https://github.com/OmniNodeCo/OmniIDE/pulls" target="_blank">PR</a></p>
     </section>
 
     <div id="lightbox" class="lightbox" onclick="closeLightbox()">
         <div class="lightbox-content"><span class="lightbox-close">&times;</span>
-            <div class="lightbox-placeholder"><span id="lightbox-title">Screenshot</span><small id="lightbox-desc">Description</small></div>
+            <img id="lightbox-img" src="" alt="">
+            <div class="lightbox-placeholder" id="lightbox-fallback"><span id="lightbox-title">Screenshot</span><small id="lightbox-desc">Description</small></div>
         </div>
     </div>
 
@@ -195,6 +193,7 @@
                     <tr><td>Find &amp; Replace</td><td><kbd>Ctrl</kbd>+<kbd>F</kbd></td></tr>
                     <tr><td>Search in Files</td><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>F</kbd></td></tr>
                     <tr><td>Go to Line</td><td><kbd>Ctrl</kbd>+<kbd>G</kbd></td></tr>
+                    <tr><td>Go to Symbol</td><td><kbd>Ctrl</kbd>+<kbd>T</kbd></td></tr>
                     <tr><td>Toggle Comment</td><td><kbd>Ctrl</kbd>+<kbd>/</kbd></td></tr>
                     <tr><td>Duplicate Line</td><td><kbd>Ctrl</kbd>+<kbd>D</kbd></td></tr>
                     <tr><td>Delete Line</td><td><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>D</kbd></td></tr>
@@ -222,6 +221,11 @@
                 <div class="timeline-content">
                     <h3>v1.1.0</h3><span class="timeline-date">Latest</span>
                     <ul>
+                        <li><strong>Problems panel</strong> — live Python/JSON error checking with gutter markers and click-to-jump</li>
+                        <li><strong>Go to Symbol</strong> (Ctrl+T) and <strong>Git working tree</strong> — stage / discard / diff per file</li>
+                        <li><strong>ANSI-colored terminal</strong> — 16/256/truecolor, scrollback limit, search history</li>
+                        <li><strong>New welcome screen</strong>, find &amp; replace in selection, file-change watcher</li>
+                        <li>Real screenshots on this page (rendered from the actual app)</li>
                         <li><strong>Run File</strong> (Ctrl+F5) — runs Python/JS/Shell/Go/TS and more in a dedicated terminal tab</li>
                         <li><strong>Convert Case</strong> (UPPER/lower/camel/snake/kebab) and <strong>Format JSON</strong>, <strong>Revert File</strong></li>
                         <li><strong>Recent Files / Recent Folders</strong> menus and <strong>session restore</strong> on start</li>

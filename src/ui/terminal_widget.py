@@ -11,6 +11,8 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QProcess, QProcessEnvironment
 from PyQt6.QtGui import QFont, QTextCursor
 
+from src.core import ansi
+
 
 def detect_shells():
     shells = []
@@ -65,6 +67,8 @@ class TerminalInstance(QWidget):
         self.output = QPlainTextEdit()
         self.output.setReadOnly(True)
         self.output.setFont(font)
+        self.output.setMaximumBlockCount(
+            int(self.app.settings.get("terminal_max_lines", 5000)))
         self.output.setStyleSheet(f"""
             QPlainTextEdit {{
                 background-color: {c['terminal_bg']};
@@ -138,8 +142,8 @@ class TerminalInstance(QWidget):
         self.process.started.connect(self._flush_pending)
 
         env = QProcessEnvironment.systemEnvironment()
-        env.insert("TERM", "dumb")
-        env.insert("NO_COLOR", "1")
+        env.insert("TERM", "xterm-256color")
+        env.insert("COLORTERM", "truecolor")
         self.process.setProcessEnvironment(env)
 
         cwd = self.app.current_project_path or os.getcwd()
@@ -185,9 +189,30 @@ class TerminalInstance(QWidget):
     def _on_finished(self):
         self._write("\n--- Shell exited ---\n")
 
+    @staticmethod
+    def _clean_for_display(text):
+        """Normalize control characters for an append-only output widget.
+
+        A real terminal handles \\r by returning the cursor to column 0;
+        we approximate by turning it into a newline so interactive shell
+        line-editing echoes don't interleave onto the same line.
+        """
+        text = text.replace("\r\n", "\n").replace("\r", "\n")
+        text = text.replace("\x08", "")    # backspace
+        text = text.replace("\x0c", "\n")  # form feed
+        return text
+
     def _write(self, text):
+        text = self._clean_for_display(text)
         self.output.moveCursor(QTextCursor.MoveOperation.End)
-        self.output.insertPlainText(text)
+        segments = ansi.parse_ansi(text)
+        if all(s.fg is None and not s.bold for s in segments):
+            self.output.insertPlainText(ansi.strip_ansi(text))
+        else:
+            html = ansi.render_html(
+                segments, base_color=self.app.colors.get("terminal_fg", "#a6e3a1"))
+            cursor = self.output.textCursor()
+            cursor.insertHtml(html)
         self.output.moveCursor(QTextCursor.MoveOperation.End)
 
     def clear(self):
