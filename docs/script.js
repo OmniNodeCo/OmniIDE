@@ -38,17 +38,37 @@ function toggleFaq(btn) {
 
 // ── Lightbox ──
 function openLightbox(el) {
-    const title = el.querySelector('span').textContent;
-    const desc = el.querySelector('small').textContent;
+    const img = el.querySelector('img');
+    const lightboxImg = document.getElementById('lightbox-img');
+    const fallback = document.getElementById('lightbox-fallback');
 
-    document.getElementById('lightbox-title').textContent = title;
-    document.getElementById('lightbox-desc').textContent = desc;
+    // Real screenshot: show the image, hide the placeholder
+    if (img && lightboxImg) {
+        lightboxImg.src = img.src;
+        lightboxImg.classList.add('visible');
+        if (fallback) fallback.style.display = 'none';
+        document.getElementById('lightbox-title').textContent = el.dataset.title || 'Screenshot';
+        document.getElementById('lightbox-desc').textContent = el.dataset.desc || '';
+    } else {
+        // Legacy placeholder
+        const span = el.querySelector('span');
+        const small = el.querySelector('small');
+        if (span) document.getElementById('lightbox-title').textContent = span.textContent;
+        if (small) document.getElementById('lightbox-desc').textContent = small.textContent;
+        if (lightboxImg) lightboxImg.classList.remove('visible');
+        if (fallback) fallback.style.display = '';
+    }
+
     document.getElementById('lightbox').classList.add('active');
     document.body.style.overflow = 'hidden';
 }
 
 function closeLightbox() {
     document.getElementById('lightbox').classList.remove('active');
+    const lightboxImg = document.getElementById('lightbox-img');
+    if (lightboxImg) lightboxImg.classList.remove('visible');
+    const fallback = document.getElementById('lightbox-fallback');
+    if (fallback) fallback.style.display = '';
     document.body.style.overflow = '';
 }
 

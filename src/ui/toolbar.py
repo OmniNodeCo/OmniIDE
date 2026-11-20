@@ -19,6 +19,7 @@ class Toolbar(QWidget):
             ("New", "new_file", app.file_manager.new_file, None),
             ("Open", "open_file", app.file_manager.open_file, None),
             ("Save", "save", app.file_manager.save_file, "primary"),
+            ("Run", "play", lambda: app.run_current_file(), None),
             (None, None, None, None),
             ("Find", "search", lambda: app.toggle_search(), None),
             (None, None, None, None),
